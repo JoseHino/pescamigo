@@ -2,7 +2,8 @@ import { useState, type FormEvent } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { Anchor, Fish, Sailboat } from 'lucide-react'
 import { Button, ErrorMsg, Field, Header, inputCls } from '../components/ui'
-import { setRole, signIn, signInDemo, signInGoogle, signUp } from '../data/store'
+import { setRole, signIn, signInGoogle, signUp } from '../data/store'
+import { GOOGLE_ENABLED } from '../lib/supabase'
 import type { Role } from '../types'
 
 function GoogleMark() {
@@ -18,10 +19,6 @@ function GoogleMark() {
 
 export function Welcome() {
   const nav = useNavigate()
-  const demo = (r: Role) => {
-    signInDemo(r)
-    nav('/')
-  }
   return (
     <div className="flex h-full flex-col bg-ink text-white">
       <div className="relative flex flex-1 flex-col justify-end overflow-hidden px-6 pb-8">
@@ -53,20 +50,9 @@ export function Welcome() {
           </p>
         </div>
       </div>
-      <div className="space-y-3 rounded-t-3xl bg-foam px-6 pb-7 pt-6 text-ink">
+      <div className="space-y-3 rounded-t-3xl bg-foam px-6 pb-8 pt-6 text-ink">
         <Button full onClick={() => nav('/acceso?modo=registro')}>Crear cuenta</Button>
         <Button full variant="outline" onClick={() => nav('/acceso')}>Ya tengo cuenta</Button>
-        <div className="pt-2">
-          <p className="mb-2 text-center text-xs font-semibold uppercase tracking-wide text-ink-soft">Probar la demo sin registrarse</p>
-          <div className="grid grid-cols-2 gap-3">
-            <button onClick={() => demo('fisher')} className="flex items-center justify-center gap-2 rounded-xl border border-line bg-white py-2.5 text-[13px] font-semibold hover:border-ink-soft">
-              <Fish size={16} className="text-sea" /> Como pescador
-            </button>
-            <button onClick={() => demo('owner')} className="flex items-center justify-center gap-2 rounded-xl border border-line bg-white py-2.5 text-[13px] font-semibold hover:border-ink-soft">
-              <Anchor size={16} className="text-sea" /> Como propietario
-            </button>
-          </div>
-        </div>
       </div>
     </div>
   )
@@ -78,31 +64,35 @@ export function Auth() {
   const register = q.get('modo') === 'registro'
   const [f, setF] = useState({ name: '', username: '', email: '', password: '' })
   const [err, setErr] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
   const on = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement>) => setF({ ...f, [k]: e.target.value })
 
-  const submit = (e: FormEvent) => {
+  const submit = async (e: FormEvent) => {
     e.preventDefault()
-    const error = register ? signUp(f) : signIn(f.email, f.password)
-    setErr(error)
-    if (!error) nav('/')
-  }
-  const google = () => {
-    signInGoogle()
+    if (busy) return
+    setBusy(true)
+    setErr(null)
+    const error = register ? await signUp(f) : await signIn(f.email, f.password)
+    setBusy(false)
+    if (error) return setErr(error)
     nav('/')
   }
+  const google = async () => setErr(await signInGoogle())
 
   return (
     <div className="flex h-full flex-col bg-foam">
       <Header title={register ? 'Crear cuenta' : 'Iniciar sesión'} back />
       <div className="flex-1 overflow-y-auto px-5 py-6">
-        <button onClick={google} className="flex w-full items-center justify-center gap-2.5 rounded-xl border border-line bg-white py-3 text-[15px] font-semibold hover:bg-foam">
-          <GoogleMark /> Continuar con Google
-        </button>
-        <p className="mt-1.5 text-center text-xs text-ink-soft">En esta demo el acceso con Google está simulado.</p>
-
-        <div className="my-5 flex items-center gap-3 text-xs font-semibold text-ink-soft">
-          <span className="h-px flex-1 bg-line" /> o con tu correo <span className="h-px flex-1 bg-line" />
-        </div>
+        {GOOGLE_ENABLED && (
+          <>
+            <button onClick={google} className="flex w-full items-center justify-center gap-2.5 rounded-xl border border-line bg-white py-3 text-[15px] font-semibold hover:bg-foam">
+              <GoogleMark /> Continuar con Google
+            </button>
+            <div className="my-5 flex items-center gap-3 text-xs font-semibold text-ink-soft">
+              <span className="h-px flex-1 bg-line" /> o con tu correo <span className="h-px flex-1 bg-line" />
+            </div>
+          </>
+        )}
 
         <form onSubmit={submit} className="space-y-4">
           {register && (
@@ -115,14 +105,16 @@ export function Auth() {
               </Field>
             </>
           )}
-          <Field label={register ? 'Correo electrónico' : 'Correo o nombre de usuario'}>
-            <input className={inputCls} value={f.email} onChange={on('email')} type={register ? 'email' : 'text'} autoCapitalize="none" autoComplete="email" />
+          <Field label="Correo electrónico">
+            <input className={inputCls} value={f.email} onChange={on('email')} type="email" autoCapitalize="none" autoComplete="email" />
           </Field>
           <Field label="Contraseña" hint={register ? 'Mínimo 8 caracteres.' : undefined}>
             <input className={inputCls} value={f.password} onChange={on('password')} type="password" autoComplete={register ? 'new-password' : 'current-password'} />
           </Field>
           <ErrorMsg>{err}</ErrorMsg>
-          <Button full type="submit">{register ? 'Crear cuenta' : 'Iniciar sesión'}</Button>
+          <Button full type="submit" disabled={busy}>
+            {busy ? (register ? 'Creando cuenta…' : 'Entrando…') : register ? 'Crear cuenta' : 'Iniciar sesión'}
+          </Button>
         </form>
 
         <p className="mt-5 text-center text-sm text-ink-soft">
@@ -138,6 +130,8 @@ export function Auth() {
 
 export function RoleSetup() {
   const [role, setR] = useState<Role | null>(null)
+  const [err, setErr] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
   const options: { id: Role; icon: typeof Fish; title: string; text: string }[] = [
     { id: 'fisher', icon: Fish, title: 'Quiero salir a pescar', text: 'No tengo barco. Recibo avisos de salidas cerca y reservo plaza.' },
     { id: 'owner', icon: Anchor, title: 'Tengo barco', text: 'Publico mis salidas con fecha y horario y comparto gastos con quien venga.' },
@@ -163,12 +157,16 @@ export function RoleSetup() {
             </span>
           </button>
         ))}
+        <ErrorMsg>{err}</ErrorMsg>
       </div>
       <Button
         full
-        disabled={!role}
-        onClick={() => {
-          if (role) setRole(role)
+        disabled={!role || busy}
+        onClick={async () => {
+          if (!role) return
+          setBusy(true)
+          setErr(await setRole(role)) // al guardarse el rol, la app pasa sola a la pantalla siguiente
+          setBusy(false)
         }}
       >
         Continuar

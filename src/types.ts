@@ -1,14 +1,15 @@
 export type Role = 'owner' | 'fisher'
 
-export interface User {
+/** Lo que cualquier usuario ve de otro. El correo nunca sale de la base de datos hacia otros usuarios. */
+export interface PublicUser {
   id: string
-  email: string
   username: string
   name: string
-  passHash: string | null // null si entra con Google
-  provider: 'email' | 'google'
   role: Role | null
-  createdAt: string
+}
+
+export interface User extends PublicUser {
+  email: string
   prefs: { ports: string[]; types: string[]; push: boolean }
 }
 
@@ -35,6 +36,7 @@ export interface Outing {
   start: string // HH:mm
   end: string
   seats: number
+  seatsTaken: number
   type: string
   costShare: number // € por persona, en efectivo al propietario
   notes: string
@@ -47,7 +49,6 @@ export interface Booking {
   fisherId: string
   seats: number
   fee: number
-  cardLast4: string
   status: 'confirmed' | 'cancelled'
   createdAt: string
 }
@@ -55,7 +56,7 @@ export interface Booking {
 export interface Review {
   id: string
   boatId: string
-  bookingId: string | null
+  bookingId: string
   authorName: string
   rating: number
   comment: string
@@ -74,11 +75,12 @@ export interface Notice {
 }
 
 export interface State {
-  users: User[]
+  ready: boolean // false mientras se comprueba la sesión
+  me: User | null
+  users: PublicUser[]
   boats: Boat[]
   outings: Outing[]
   bookings: Booking[]
   reviews: Review[]
   notices: Notice[]
-  sessionUserId: string | null
 }

@@ -44,7 +44,7 @@ export function OwnerOutings() {
           </ul>
         )}
         {open && (
-          <button onClick={() => { if (window.confirm('¿Cancelar la salida? Se avisará a quien haya reservado.')) cancelOuting(id) }}
+          <button onClick={async () => { if (window.confirm('¿Cancelar la salida? Se avisará a quien haya reservado.')) { const e = await cancelOuting(id); if (e) window.alert(e) } }}
             className="mt-2.5 text-[13px] font-semibold text-red-700">
             Cancelar salida
           </button>
@@ -89,6 +89,7 @@ export function Publish() {
   const [f, setF] = useState({ date: addDays(1), start: '07:00', end: '13:00', seats: 2, type: 'Fondo', costShare: '20', notes: '' })
   const [calc, setCalc] = useState({ open: false, fuel: '', other: '' })
   const [err, setErr] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
 
   if (!boat) {
     return (
@@ -104,9 +105,12 @@ export function Publish() {
   const total = (parseFloat(calc.fuel.replace(',', '.')) || 0) + (parseFloat(calc.other.replace(',', '.')) || 0)
   const suggested = Math.ceil(total / people)
 
-  const submit = (e: FormEvent) => {
+  const submit = async (e: FormEvent) => {
     e.preventDefault()
-    const error = publishOuting({ ...f, costShare: parseFloat(f.costShare.replace(',', '.')), notes: f.notes.trim() })
+    if (busy) return
+    setBusy(true)
+    const error = await publishOuting({ ...f, costShare: parseFloat(f.costShare.replace(',', '.')), notes: f.notes.trim() })
+    setBusy(false)
     if (error) return setErr(error)
     nav('/mis-salidas')
   }
@@ -177,7 +181,7 @@ export function Publish() {
           <ErrorMsg>{err}</ErrorMsg>
         </div>
         <div className="border-t border-line bg-white p-4">
-          <Button full variant="accent" type="submit">Publicar salida</Button>
+          <Button full variant="accent" type="submit" disabled={busy}>{busy ? 'Publicando…' : 'Publicar salida'}</Button>
         </div>
       </form>
     </div>
@@ -201,6 +205,7 @@ export function BoatEdit() {
     licenseDeclared: boat?.licenseDeclared ?? false,
   })
   const [err, setErr] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
 
   const addPhoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -213,13 +218,17 @@ export function BoatEdit() {
       setErr('No se ha podido leer la imagen. Prueba con otra.')
     }
   }
-  const submit = (e: FormEvent) => {
+  const submit = async (e: FormEvent) => {
     e.preventDefault()
+    if (busy) return
     const lengthM = parseFloat(f.lengthM.replace(',', '.'))
     if (!f.name.trim()) return setErr('Pon el nombre del barco.')
     if (!lengthM || lengthM <= 0) return setErr('Indica la eslora en metros.')
     if (f.photos.length === 0) return setErr('Añade al menos una foto del barco.')
-    saveBoat({ ...f, name: f.name.trim(), model: f.model.trim(), description: f.description.trim(), lengthM })
+    setBusy(true)
+    const error = await saveBoat({ ...f, name: f.name.trim(), model: f.model.trim(), description: f.description.trim(), lengthM })
+    setBusy(false)
+    if (error) return setErr(error)
     nav(boat ? '/perfil' : '/publicar')
   }
 
@@ -283,7 +292,7 @@ export function BoatEdit() {
           <ErrorMsg>{err}</ErrorMsg>
         </div>
         <div className="border-t border-line bg-white p-4">
-          <Button full type="submit">Guardar barco</Button>
+          <Button full type="submit" disabled={busy}>{busy ? 'Guardando…' : 'Guardar barco'}</Button>
         </div>
       </form>
     </div>

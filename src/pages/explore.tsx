@@ -9,6 +9,7 @@ import { FISHING_TYPES, SERVICE_FEE, dayLabel, duration, euro, longDate, shortDa
 
 export function MapPage() {
   const s = useAppState()
+  const me = useMe()
   const [sel, setSel] = useState<string | null>(null)
   const upcoming = upcomingOutings(s)
   const items = useMemo(
@@ -27,6 +28,14 @@ export function MapPage() {
           <span className="h-2.5 w-2.5 rounded-full bg-buoy" /> Con salida publicada
         </div>
       </div>
+      {s.boats.length === 0 && (
+        <div className="absolute inset-x-3 bottom-3 z-[500] rounded-2xl bg-white p-4 shadow-xl">
+          <p className="text-[15px] font-bold">Todavía no hay barcos en el mapa</p>
+          <p className="mt-1 text-sm text-ink-soft">
+            {me?.role === 'owner' ? 'Da de alta el tuyo desde Perfil y aparecerá aquí.' : 'En cuanto un propietario dé de alta su barco lo verás aquí.'}
+          </p>
+        </div>
+      )}
       {boat && (
         <div className="sheet-in absolute inset-x-3 bottom-3 z-[500] rounded-2xl bg-white p-3 shadow-xl">
           <button onClick={() => setSel(null)} aria-label="Cerrar" className="absolute right-2 top-2 grid h-8 w-8 place-items-center rounded-full bg-white/90 text-ink-soft hover:bg-foam">
@@ -170,8 +179,8 @@ export function OutingDetail() {
             </div>
             <div className="mt-2.5 flex items-center gap-3">
               <CreditCard size={18} className="text-sea" />
-              <span className="flex-1 text-sm">Gestión de Pescamigo, con tarjeta al reservar</span>
-              <b className="tnum">{euro(SERVICE_FEE)}</b>
+              <span className="flex-1 text-sm">{SERVICE_FEE > 0 ? 'Gestión de Pescamigo, con tarjeta al reservar' : 'Reservar en Pescamigo'}</span>
+              <b className="tnum">{SERVICE_FEE > 0 ? euro(SERVICE_FEE) : 'Gratis'}</b>
             </div>
           </div>
         </div>

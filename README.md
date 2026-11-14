@@ -2,40 +2,49 @@
 
 App móvil que conecta propietarios de barco que salen a pescar con pescadores sin barco.
 
-Esta versión es una **demo funcional**: toda la app se puede recorrer, pero los datos viven en el propio dispositivo (no hay servidor, no se cobra nada y el acceso con Google está simulado).
+Publicada en https://josehino.github.io/pescamigo/
 
-## Arrancar
+## Cómo funciona
+
+- **App**: Vite + React + TypeScript + Tailwind, mapa con Leaflet. Código en `src/`.
+- **Servidor**: proyecto `pescamigo` de Supabase (`ebiocjvcqptaoesmwmhb`). Guarda cuentas, barcos, salidas, reservas, valoraciones, avisos y fotos.
+- **Publicación**: `main` tiene el código; la rama `gh-pages` tiene la app compilada (`npm run build` y subir `dist`).
+
+## Ver quién se ha registrado
+
+Supabase → proyecto pescamigo → Table Editor → tabla `profiles`: correo, nombre de usuario, nombre, rol y fecha de alta. Se puede exportar a CSV desde ahí.
+
+Las contraseñas no están en ninguna tabla legible: Supabase las guarda cifradas y nadie puede verlas, tampoco el administrador.
+
+## Reglas que aplica el servidor
+
+- El correo de un usuario no lo puede leer ningún otro usuario.
+- Solo un propietario puede crear su barco y publicar salidas en él.
+- Las reservas, cancelaciones y valoraciones pasan por funciones del servidor que comprueban plazas, fechas y permisos.
+- Solo se puede valorar una salida ya terminada en la que se tuvo plaza.
+
+## Arrancar en el ordenador
 
 ```
 npm install
 npm run dev
 ```
 
-Cuentas de demostración (contraseña `demo1234`): `pescador.demo` y `patron.demo`. También hay dos botones en la portada para entrar sin escribir nada.
-
-## Qué incluye
-
-- Registro con correo, nombre de usuario y contraseña, o con Google (simulado). Elección de rol.
-- Mapa con los barcos en su puerto base; al pulsar uno, ficha con fotos, comentarios y valoraciones.
-- Propietario: ficha del barco, publicar salida con fecha y horario, calculadora de reparto de gastos, ver quién ha reservado, cancelar.
-- Pescador: lista de salidas con filtros, reserva con cobro de la comisión con tarjeta (simulado), mis reservas, valorar con foto.
-- Avisos: al publicarse una salida se avisa a los pescadores según sus puertos y tipos de pesca.
-
-## Decisiones provisionales (cámbialas en un sitio)
+## Decisiones provisionales
 
 | Decisión | Valor actual | Dónde |
 |---|---|---|
-| Comisión | 3 € por plaza, la paga el pescador | `src/lib/format.ts` (`SERVICE_FEE`) |
-| Confirmación de reserva | Automática al pagar | `src/data/store.ts` (`book`) |
+| Comisión | 0 € (no hay pasarela de pago conectada) | `src/lib/format.ts` (`SERVICE_FEE`) y función `book_outing` |
+| Confirmación de reserva | Automática | función `book_outing` |
 | Mapa | Puerto base, no posición en directo | `src/components/MapView.tsx` |
 | Roles | Uno por cuenta | `src/main.tsx` |
-| Valoraciones | Del pescador al barco, tras la salida | `src/data/store.ts` (`addReview`) |
 | Seguro y titulación | Declarados por el propietario, sin comprobar | `src/pages/owner.tsx` |
+| Correo al registrarse | No se verifica con un mensaje de confirmación | función `signup` de Supabase |
 
-## Pendiente para pasar a producción
+## Pendiente
 
-- Backend real: `supabase/schema.sql` es un borrador sin ejecutar.
-- Acceso con Google de verdad, cobro real de la comisión, avisos push con la app cerrada.
-- Proveedor de mapas (las teselas públicas de OpenStreetMap solo valen para pruebas).
-- Empaquetado para App Store y Google Play.
-- Textos legales y respuesta a las dudas de seguro y responsabilidad.
+- Acceso con Google (`GOOGLE_ENABLED` en `src/lib/supabase.ts`): falta crear las credenciales en Google Cloud y activarlas en Supabase.
+- Cobro de la comisión con tarjeta: falta una cuenta de Stripe.
+- Avisos push con la app cerrada: hoy los avisos se ven dentro de la app.
+- Recuperar contraseña olvidada y verificación del correo: necesitan un servicio de envío de correo.
+- Dominio pescamigo.es, proveedor de mapas para producción, textos legales y empaquetado para las tiendas.

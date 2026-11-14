@@ -91,6 +91,22 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <HashRouter>
       <Frame>
+        <Boot />
+      </Frame>
+    </HashRouter>
+  </StrictMode>,
+)
+
+function Boot() {
+  const ready = useAppState().ready
+  if (!ready) {
+    return (
+      <div className="grid h-full place-items-center bg-ink text-white" role="status">
+        <span className="text-xl font-extrabold tracking-tight">Pescamigo</span>
+      </div>
+    )
+  }
+  return (
         <Routes>
           <Route path="/" element={<Home />} />
           <Route element={<Guest />}>
@@ -128,7 +144,5 @@ createRoot(document.getElementById('root')!).render(
 
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
-      </Frame>
-    </HashRouter>
-  </StrictMode>,
-)
+  )
+}

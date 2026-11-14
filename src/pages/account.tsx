@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Anchor, Bell, BellOff, ChevronRight, Fish, LogOut, RotateCcw, Sailboat } from 'lucide-react'
+import { Anchor, Bell, ChevronRight, Fish, LogOut, Sailboat } from 'lucide-react'
 import { Button, Chip, Empty, Header } from '../components/ui'
-import { markNoticesRead, myBoat, resetDemo, signOut, updatePrefs, useAppState, useMe } from '../data/store'
+import { markNoticesRead, myBoat, signOut, updatePrefs, useAppState, useMe } from '../data/store'
 import { PORTS } from '../data/seed'
 import { FISHING_TYPES, ago } from '../lib/format'
 
@@ -52,20 +52,12 @@ export function Profile() {
   const nav = useNavigate()
   const s = useAppState()
   const me = useMe()
-  const [perm, setPerm] = useState(() => ('Notification' in window ? Notification.permission : 'unsupported'))
   if (!me) return null
   const boat = myBoat(s, me.id)
   const toggle = (key: 'ports' | 'types', v: string) => {
     const cur = me.prefs[key]
     updatePrefs({ ...me.prefs, [key]: cur.includes(v) ? cur.filter((x) => x !== v) : [...cur, v] })
   }
-  const askPush = async () => {
-    if (!('Notification' in window)) return
-    const p = await Notification.requestPermission()
-    setPerm(p)
-    if (p === 'granted') new Notification('Avisos activados', { body: 'Te avisaremos de las salidas que te interesen.' })
-  }
-
   return (
     <div className="flex h-full flex-col">
       <Header title="Perfil" />
@@ -103,7 +95,7 @@ export function Profile() {
             <div className="flex items-center justify-between gap-3">
               <div>
                 <h2 className="text-sm font-bold">Avisos de salidas nuevas</h2>
-                <p className="text-xs text-ink-soft">Recibe un aviso cuando un barco publique una salida.</p>
+                <p className="text-xs text-ink-soft">Cuando un barco publique una salida la verás en la pestaña Avisos.</p>
               </div>
               <button role="switch" aria-checked={me.prefs.push} aria-label="Avisos de salidas nuevas" onClick={() => updatePrefs({ ...me.prefs, push: !me.prefs.push })}
                 className={`relative h-7 w-12 shrink-0 rounded-full transition ${me.prefs.push ? 'bg-sea' : 'bg-line'}`}>
@@ -126,23 +118,13 @@ export function Profile() {
                   </div>
                   <p className="mt-1.5 text-xs text-ink-soft">{me.prefs.types.length ? '' : 'Sin elegir ninguno recibes cualquier tipo.'}</p>
                 </div>
-                {perm === 'default' && (
-                  <Button variant="outline" full onClick={askPush}><Bell size={16} /> Permitir avisos en este dispositivo</Button>
-                )}
-                {perm === 'denied' && (
-                  <p className="flex items-start gap-2 text-xs text-ink-soft"><BellOff size={14} className="mt-0.5 shrink-0" /> Los avisos están bloqueados en el navegador. Actívalos en los ajustes del sitio; mientras tanto los verás en la pestaña Avisos.</p>
-                )}
               </>
             )}
           </section>
         )}
 
         <div className="space-y-2">
-          <Button variant="outline" full onClick={() => { signOut(); nav('/') }}><LogOut size={16} /> Cerrar sesión</Button>
-          <button onClick={() => { if (window.confirm('Se borran las cuentas, salidas y reservas creadas en este dispositivo. ¿Reiniciar la demo?')) { resetDemo(); nav('/') } }}
-            className="flex w-full items-center justify-center gap-2 py-2 text-[13px] font-semibold text-ink-soft">
-            <RotateCcw size={14} /> Reiniciar datos de la demo
-          </button>
+          <Button variant="outline" full onClick={async () => { await signOut(); nav('/') }}><LogOut size={16} /> Cerrar sesión</Button>
         </div>
       </div>
     </div>

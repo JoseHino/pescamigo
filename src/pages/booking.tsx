@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { Camera, CheckCircle2, Lock, Minus, Plus, Star, Ticket } from 'lucide-react'
+import { Camera, CheckCircle2, Minus, Plus, Star, Ticket } from 'lucide-react'
 import { Button, Empty, ErrorMsg, Field, Header, OutingTicket, inputCls } from '../components/ui'
 import { NotFound } from './explore'
 import { addReview, book, cancelBooking, isPast, seatsLeft, useAppState, useMe } from '../data/store'
@@ -15,23 +15,22 @@ export function Checkout() {
   const o = s.outings.find((x) => x.id === id)
   const boat = o ? s.boats.find((b) => b.id === o.boatId) : null
   const [seats, setSeats] = useState(1)
-  const [card, setCard] = useState({ number: '', exp: '', cvc: '' })
   const [accept, setAccept] = useState(false)
   const [err, setErr] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
   const [done, setDone] = useState(false)
   if (!o || !boat) return <NotFound what="Esta salida ya no está disponible." />
   const left = seatsLeft(s, o)
   const port = portById(boat.portId)
 
-  const submit = (e: FormEvent) => {
+  const submit = async (e: FormEvent) => {
     e.preventDefault()
-    const digits = card.number.replace(/\D/g, '')
-    if (digits.length < 13) return setErr('Revisa el número de la tarjeta.')
-    if (!/^\d{2}\/\d{2}$/.test(card.exp)) return setErr('La caducidad va con el formato MM/AA.')
-    if (!/^\d{3,4}$/.test(card.cvc)) return setErr('Revisa el código de seguridad (CVC).')
+    if (busy) return
     if (!accept) return setErr('Marca la casilla para confirmar que lo has entendido.')
-    const res = book(o.id, seats, digits.slice(-4))
-    if (res.error) return setErr(res.error)
+    setBusy(true)
+    const error = await book(o.id, seats)
+    setBusy(false)
+    if (error) return setErr(error)
     setDone(true)
   }
 
@@ -76,34 +75,14 @@ export function Checkout() {
 
           <div className="rounded-2xl border border-line bg-white p-4 text-sm">
             <div className="flex justify-between">
-              <span>Gestión de Pescamigo ({seats} × {euro(SERVICE_FEE)})</span>
-              <b className="tnum">{euro(SERVICE_FEE * seats)}</b>
-            </div>
-            <p className="mt-0.5 text-xs text-ink-soft">Se cobra ahora con tarjeta.</p>
-            <div className="mt-3 flex justify-between border-t border-line pt-3">
               <span>Reparto de gastos ({seats} × {euro(o.costShare)})</span>
               <b className="tnum">{euro(o.costShare * seats)}</b>
             </div>
             <p className="mt-0.5 text-xs text-ink-soft">Se paga en efectivo al propietario el día de la salida.</p>
-          </div>
-
-          <div className="space-y-3 rounded-2xl border border-line bg-white p-4">
-            <p className="flex items-center gap-2 text-sm font-bold"><Lock size={15} className="text-sea" /> Tarjeta</p>
-            <Field label="Número de tarjeta">
-              <input className={`${inputCls} tnum`} inputMode="numeric" autoComplete="cc-number" placeholder="4242 4242 4242 4242" value={card.number}
-                onChange={(e) => setCard({ ...card, number: e.target.value.replace(/[^\d ]/g, '').slice(0, 19) })} />
-            </Field>
-            <div className="grid grid-cols-2 gap-3">
-              <Field label="Caducidad">
-                <input className={`${inputCls} tnum`} inputMode="numeric" autoComplete="cc-exp" placeholder="MM/AA" value={card.exp}
-                  onChange={(e) => setCard({ ...card, exp: e.target.value.replace(/[^\d/]/g, '').slice(0, 5) })} />
-              </Field>
-              <Field label="CVC">
-                <input className={`${inputCls} tnum`} inputMode="numeric" autoComplete="cc-csc" placeholder="123" value={card.cvc}
-                  onChange={(e) => setCard({ ...card, cvc: e.target.value.replace(/\D/g, '').slice(0, 4) })} />
-              </Field>
+            <div className="mt-3 flex justify-between border-t border-line pt-3">
+              <span>Reservar en Pescamigo</span>
+              <b className="tnum">{SERVICE_FEE > 0 ? euro(SERVICE_FEE * seats) : 'Gratis'}</b>
             </div>
-            <p className="rounded-lg bg-sea-50 px-3 py-2 text-xs text-sea-dark">Modo demo: no se realiza ningún cargo ni se guarda la tarjeta. Vale cualquier número.</p>
           </div>
 
           <label className="flex items-start gap-3 text-[13px] leading-snug">
@@ -113,7 +92,9 @@ export function Checkout() {
           <ErrorMsg>{err}</ErrorMsg>
         </div>
         <div className="border-t border-line bg-white p-4">
-          <Button full variant="accent" type="submit">Pagar {euro(SERVICE_FEE * seats)} y reservar</Button>
+          <Button full variant="accent" type="submit" disabled={busy}>
+            {busy ? 'Reservando…' : seats === 1 ? 'Reservar plaza' : `Reservar ${seats} plazas`}
+          </Button>
         </div>
       </form>
     </div>
@@ -150,7 +131,7 @@ export function Trips() {
                         <b>{b.seats} {b.seats === 1 ? 'plaza' : 'plazas'}</b>
                         <span className="text-ink-soft"> · lleva {euro(o.costShare * b.seats)} en efectivo</span>
                       </p>
-                      <button onClick={() => { if (window.confirm('¿Cancelar esta reserva?')) cancelBooking(b.id) }} className="text-[13px] font-semibold text-red-700">
+                      <button onClick={async () => { if (window.confirm('¿Cancelar esta reserva?')) { const e = await cancelBooking(b.id); if (e) window.alert(e) } }} className="text-[13px] font-semibold text-red-700">
                         Cancelar
                       </button>
                     </div>
@@ -197,11 +178,15 @@ export function ReviewForm() {
   const [comment, setComment] = useState('')
   const [photo, setPhoto] = useState<string | null>(null)
   const [err, setErr] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
   if (!b || !o || !boat) return <NotFound what="No encontramos esta reserva." />
 
-  const submit = (e: FormEvent) => {
+  const submit = async (e: FormEvent) => {
     e.preventDefault()
-    const error = addReview(b.id, rating, comment, photo)
+    if (busy) return
+    setBusy(true)
+    const error = await addReview(b.id, rating, comment, photo)
+    setBusy(false)
     if (error) return setErr(error)
     nav(`/barco/${boat.id}`, { replace: true })
   }
@@ -251,7 +236,7 @@ export function ReviewForm() {
           )}
         </div>
         <ErrorMsg>{err}</ErrorMsg>
-        <Button full type="submit">Publicar valoración</Button>
+        <Button full type="submit" disabled={busy}>{busy ? 'Publicando…' : 'Publicar valoración'}</Button>
       </form>
     </div>
   )
