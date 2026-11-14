@@ -4,7 +4,7 @@ import {
   BadgeCheck, Banknote, CalendarX, ChevronLeft, ChevronRight, Clock, MapPin, MessageCircle, Repeat, Ruler, ShieldCheck, Users, X,
 } from 'lucide-react'
 import MapView from '../components/MapView'
-import { Button, Chip, Empty, Header, OutingTicket, Rating, SectionTitle, Stars, StatusBadge } from '../components/ui'
+import { Button, Chip, Empty, Header, OutingTicket, OwnerBadge, Rating, SectionTitle, Stars, StatusBadge } from '../components/ui'
 import { boatRating, bookingWindow, conversationFor, myActiveBooking, seatsLeft, upcomingOutings, useAppState, useMe } from '../data/store'
 import { PORTS, portById } from '../data/seed'
 import { FISHING_TYPES, WEEKDAYS, dayLabel, duration, euro, isoDate, longDate, monthLabel, shortDate } from '../lib/format'
@@ -47,10 +47,13 @@ export function MapPage() {
           <Link to={`/barco/${boat.id}`} className="flex gap-3">
             <img src={boat.photos[0]} alt="" className="h-20 w-24 shrink-0 rounded-xl object-cover" />
             <div className="min-w-0 flex-1 pr-7">
-              <p className="truncate text-base font-bold">{boat.name}</p>
+              <p className="flex min-w-0 items-center gap-1.5">
+                <span className="truncate text-base font-bold">{boat.name}</span>
+                <OwnerBadge ownerId={boat.ownerId} size="sm" />
+              </p>
               <p className="truncate text-xs text-ink-soft">{boat.model}</p>
-              <p className="mt-1 flex items-center gap-1 truncate text-xs text-ink-soft">
-                <MapPin size={12} /> {portById(boat.portId).name}
+              <p className="mt-1 flex min-w-0 items-center gap-1 text-xs text-ink-soft">
+                <MapPin size={12} className="shrink-0" /> <span className="truncate">{portById(boat.portId).name}</span>
               </p>
               <div className="mt-1"><Rating boatId={boat.id} /></div>
             </div>
@@ -304,7 +307,10 @@ export function OutingDetail() {
           <Link to={`/barco/${boat.id}`} className="flex items-center gap-3 rounded-2xl border border-line bg-white p-3">
             <img src={boat.photos[boat.photos.length > 1 ? 1 : 0]} alt="" className="h-14 w-14 shrink-0 rounded-xl bg-sea-50 object-cover" />
             <div className="min-w-0 flex-1">
-              <p className="truncate text-[15px] font-bold">{boat.name}</p>
+              <p className="flex min-w-0 items-center gap-1.5">
+                <span className="truncate text-[15px] font-bold">{boat.name}</span>
+                <OwnerBadge ownerId={boat.ownerId} size="sm" />
+              </p>
               <p className="truncate text-xs text-ink-soft">Patrón: {owner?.name ?? '—'}</p>
               <Rating boatId={boat.id} />
             </div>
@@ -373,6 +379,7 @@ export function BoatProfile() {
   const owner = s.users.find((u) => u.id === boat.ownerId)
   const reviews = s.reviews.filter((r) => r.boatId === boat.id).sort((a, b) => b.date.localeCompare(a.date))
   const r = boatRating(s, boat.id)
+  const trips = s.tripCounts[boat.ownerId] ?? 0
   const outings = upcomingOutings(s).filter((o) => o.boatId === boat.id)
   const gallery = [...boat.photos, ...reviews.flatMap((x) => (x.photo ? [x.photo] : []))]
 
@@ -396,6 +403,12 @@ export function BoatProfile() {
                 {r.count ? `${r.avg.toFixed(1).replace('.', ',')} · ${r.count} ${r.count === 1 ? 'valoración' : 'valoraciones'}` : 'Sin valoraciones todavía'}
               </span>
             </div>
+            {trips > 0 && (
+              <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1">
+                <OwnerBadge ownerId={boat.ownerId} />
+                <span className="text-[13px] text-ink-soft">{trips} {trips === 1 ? 'salida hecha' : 'salidas hechas'} con pescadores a bordo</span>
+              </div>
+            )}
           </div>
 
           <div className="grid grid-cols-3 gap-2 text-center">

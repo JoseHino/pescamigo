@@ -147,4 +147,6 @@ export interface State {
   blocked: BlockedDay[]
   conversations: Conversation[]
   messages: Record<string, Message[]> // por conversación, se cargan al abrir el chat
+  /** Salidas hechas con pescadores a bordo, por patrón (para las marcas de patrón habitual y superpatrón). */
+  tripCounts: Record<string, number>
 }

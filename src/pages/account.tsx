@@ -1,10 +1,10 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Anchor, Bell, ChevronRight, ExternalLink, Fish, LayoutDashboard, LogOut, Smartphone, X } from 'lucide-react'
-import { Button, Chip, Empty, ErrorMsg, Header, inputCls } from '../components/ui'
+import { Button, Chip, Empty, ErrorMsg, Header, OwnerBadge, inputCls } from '../components/ui'
 import { markNoticesRead, myBoats, saveLinks, setNotifyEmail, signOut, updatePrefs, useAppState, useMe } from '../data/store'
 import { PORTS } from '../data/seed'
-import { FISHING_TYPES, MAX_LINKS, ago, linkLabel, normalizeLink } from '../lib/format'
+import { FISHING_TYPES, HABITUAL_MIN, MAX_LINKS, SUPER_MIN, ago, linkLabel, normalizeLink } from '../lib/format'
 import { disablePush, enablePush, pushState, type PushState } from '../lib/push'
 
 export function Alerts() {
@@ -91,6 +91,35 @@ function DevicePush() {
       </div>
       <ErrorMsg>{err}</ErrorMsg>
     </div>
+  )
+}
+
+/** Progreso del patrón hacia las marcas "Patrón habitual" y "Superpatrón". */
+function OwnerLevelCard({ ownerId }: { ownerId: string }) {
+  const s = useAppState()
+  const trips = s.tripCounts[ownerId] ?? 0
+  const goal = trips < HABITUAL_MIN ? { n: HABITUAL_MIN, label: 'Patrón habitual' } : trips < SUPER_MIN ? { n: SUPER_MIN, label: 'Superpatrón' } : null
+  const from = trips < HABITUAL_MIN ? 0 : HABITUAL_MIN
+  const pct = goal ? Math.round(((trips - from) / (goal.n - from)) * 100) : 100
+  return (
+    <section className="space-y-3 rounded-2xl border border-line bg-white p-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h2 className="text-sm font-bold">Tu marca de patrón</h2>
+        <OwnerBadge ownerId={ownerId} />
+      </div>
+      <p className="text-[13px]">
+        Llevas <b className="tnum">{trips}</b> {trips === 1 ? 'salida hecha' : 'salidas hechas'} con pescadores a bordo.
+        {goal ? ` Te ${goal.n - trips === 1 ? 'falta 1' : `faltan ${goal.n - trips}`} para ser ${goal.label}.` : ' Tienes la marca más alta.'}
+      </p>
+      {goal && (
+        <div className="h-2 overflow-hidden rounded-full bg-foam" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} aria-label={`Progreso hacia ${goal.label}`}>
+          <div className="h-full rounded-full bg-sea" style={{ width: `${Math.max(pct, 3)}%` }} />
+        </div>
+      )}
+      <p className="text-xs text-ink-soft">
+        Con más de {HABITUAL_MIN - 1} salidas tu barco lleva la marca Patrón habitual y con más de {SUPER_MIN - 1}, Superpatrón. Solo cuentan las salidas ya hechas con algún pescador confirmado.
+      </p>
+    </section>
   )
 }
 
@@ -195,6 +224,7 @@ export function Profile() {
             <ChevronRight size={18} className="shrink-0 text-ink-soft" />
           </Link>
         )}
+        {me.role === 'owner' && <OwnerLevelCard ownerId={me.id} />}
 
         <section className="space-y-4 rounded-2xl border border-line bg-white p-4">
           <h2 className="text-sm font-bold">Avisos</h2>

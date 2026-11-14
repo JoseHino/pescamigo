@@ -9,7 +9,7 @@ import { disablePush, syncPush } from '../lib/push'
 
 const EMPTY = {
   users: [], boats: [], outings: [], bookings: [], reviews: [], notices: [],
-  rules: [], blocked: [], conversations: [], messages: {},
+  rules: [], blocked: [], conversations: [], messages: {}, tripCounts: {},
 }
 let state: State = { ready: false, me: null, settings: { commissionPct: 20, paymentsEnabled: false }, ...EMPTY }
 const listeners = new Set<() => void>()
@@ -130,7 +130,7 @@ export function refresh(): Promise<void> {
   if (!state.me) return Promise.resolve()
   if (loading) return loading
   loading = (async () => {
-    const [users, boats, outings, bookings, reviews, notices, settings, rules, blocked, convs] = await Promise.all([
+    const [users, boats, outings, bookings, reviews, notices, settings, rules, blocked, convs, trips] = await Promise.all([
       supabase.from('profiles').select('id,username,full_name,role,links'),
       supabase.from('boats').select('*'),
       supabase.from('outings').select('*').gte('day', addDays(-120)),
@@ -141,6 +141,7 @@ export function refresh(): Promise<void> {
       supabase.from('outing_rules').select('*').eq('active', true),
       supabase.from('boat_blocked_days').select('boat_id,day').gte('day', isoDate(new Date())),
       supabase.from('conversations').select('*').order('last_message_at', { ascending: false }),
+      supabase.rpc('owner_trip_counts'),
     ])
     const failed = [users, boats, outings, bookings, reviews, notices, settings, rules, blocked, convs].some((r) => r.error)
     // Si alguna consulta falla (sin cobertura, por ejemplo) se conserva lo que ya había en pantalla.
@@ -165,6 +166,10 @@ export function refresh(): Promise<void> {
       rules: (rules.data ?? []).map(toRule),
       blocked: (blocked.data ?? []).map((r: any) => ({ boatId: r.boat_id, day: r.day })),
       conversations: (convs.data ?? []).map(toConversation),
+      // Si el recuento falla, se conservan las marcas que ya había: no impide cargar lo demás.
+      tripCounts: trips.error
+        ? state.tripCounts
+        : Object.fromEntries(((trips.data ?? []) as { owner_id: string; trips: number }[]).map((r) => [r.owner_id, r.trips])),
     })
   })().finally(() => {
     loading = null

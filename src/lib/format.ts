@@ -2,6 +2,17 @@ import type { BookingStatus } from '../types'
 
 export const FISHING_TYPES = ['Pesca al vivo', 'Pesca a fondo', 'Curricán', 'Jigging', 'Egging / calamares']
 
+/* ---------- marcas del patrón (como los niveles de BlaBlaCar) ---------- */
+
+/** Más de 10 salidas hechas con pescadores = patrón habitual; más de 25 = superpatrón. */
+export const HABITUAL_MIN = 11
+export const SUPER_MIN = 26
+export type OwnerLevel = 'habitual' | 'super'
+export function ownerLevel(trips: number): OwnerLevel | null {
+  return trips >= SUPER_MIN ? 'super' : trips >= HABITUAL_MIN ? 'habitual' : null
+}
+export const LEVEL_LABEL: Record<OwnerLevel, string> = { habitual: 'Patrón habitual', super: 'Superpatrón' }
+
 /* ---------- enlaces del perfil (Instagram, TikTok…) ---------- */
 
 export const MAX_LINKS = 5

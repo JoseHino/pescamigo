@@ -1,10 +1,10 @@
 import type { ButtonHTMLAttributes, ReactNode } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { ArrowLeft, ArrowRight, Banknote, Bell, ExternalLink, MapPin, Repeat, Star, Users } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Award, Banknote, Bell, Crown, ExternalLink, MapPin, Repeat, Star, Users } from 'lucide-react'
 import type { BookingStatus, Outing } from '../types'
 import { boatRating, seatsLeft, useAppState } from '../data/store'
 import { portById } from '../data/seed'
-import { STATUS, dayLabel, duration, euro, linkLabel } from '../lib/format'
+import { LEVEL_LABEL, STATUS, dayLabel, duration, euro, linkLabel, ownerLevel } from '../lib/format'
 
 export const inputCls =
   'w-full min-w-0 rounded-xl border border-line bg-white px-3.5 py-3 text-[15px] text-ink placeholder:text-ink-soft/60 focus:border-sea focus:outline-none focus:ring-2 focus:ring-sea/20 disabled:bg-foam disabled:text-ink-soft'
@@ -83,6 +83,25 @@ export function Rating({ boatId }: { boatId: string }) {
       <Star size={13} className="fill-amber-400 text-amber-400" />
       <span className="tnum">{r.avg.toFixed(1).replace('.', ',')}</span>
       <span className="font-normal text-ink-soft">({r.count})</span>
+    </span>
+  )
+}
+
+/** Marca del patrón según las salidas que ha hecho con pescadores: "Patrón habitual" (más de 10) o "Superpatrón" (más de 25). */
+export function OwnerBadge({ ownerId, size = 'md' }: { ownerId: string; size?: 'sm' | 'md' }) {
+  const s = useAppState()
+  const trips = s.tripCounts[ownerId] ?? 0
+  const level = ownerLevel(trips)
+  if (!level) return null
+  const Icon = level === 'super' ? Crown : Award
+  return (
+    <span
+      title={`${trips} salidas hechas con pescadores`}
+      className={`inline-flex shrink-0 items-center gap-1 rounded-full font-semibold ${
+        level === 'super' ? 'bg-buoy-50 text-buoy-dark' : 'bg-sea-50 text-sea-dark'
+      } ${size === 'sm' ? 'px-2 py-0.5 text-[11px]' : 'px-2.5 py-1 text-xs'}`}
+    >
+      <Icon size={size === 'sm' ? 11 : 13} className="shrink-0" /> {LEVEL_LABEL[level]}
     </span>
   )
 }
@@ -214,7 +233,10 @@ export function OutingTicket({ outing, footer, to }: { outing: Outing; footer?: 
         </div>
         <div className="mt-3 flex items-center justify-between gap-3">
           <div className="min-w-0">
-            <p className="truncate text-[15px] font-bold">{boat.name}</p>
+            <p className="flex min-w-0 items-center gap-1.5">
+              <span className="truncate text-[15px] font-bold">{boat.name}</span>
+              <OwnerBadge ownerId={boat.ownerId} size="sm" />
+            </p>
             <p className="flex items-center gap-1 text-xs text-ink-soft">
               <MapPin size={12} className="shrink-0" /> <span className="truncate">{port.name}</span>
             </p>
