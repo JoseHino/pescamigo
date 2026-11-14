@@ -6,7 +6,16 @@ import { portById } from '../data/seed'
 const boatSvg =
   '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v11H5z"/><path d="M14.5 7v7H19z"/><path d="M3 17h18l-2.5 4h-13z"/></svg>'
 
-function pin(active: boolean, hasOuting: boolean) {
+// Varios barcos del mismo puerto se colocan en anillo alrededor del puerto, separados en píxeles
+// para que no se tapen sea cual sea el zoom.
+function ringOffset(n: number): [number, number] {
+  if (n === 0) return [0, 0]
+  const ring = Math.ceil(n / 6)
+  const angle = ((n - 1) % 6) * (Math.PI / 3) + (ring % 2 ? 0 : Math.PI / 6)
+  return [Math.round(Math.cos(angle) * 44 * ring), Math.round(Math.sin(angle) * 44 * ring)]
+}
+
+function pin(active: boolean, hasOuting: boolean, [dx, dy]: [number, number] = [0, 0]) {
   const bg = active ? '#F26B21' : '#0B2A4A'
   const dot = hasOuting && !active
     ? '<span style="position:absolute;top:-2px;right:-2px;width:12px;height:12px;border-radius:50%;background:#F26B21;border:2px solid #fff"></span>'
@@ -14,7 +23,7 @@ function pin(active: boolean, hasOuting: boolean) {
   return L.divIcon({
     className: 'pin',
     iconSize: [40, 40],
-    iconAnchor: [20, 20],
+    iconAnchor: [20 - dx, 20 - dy],
     html: `<div style="position:relative;width:40px;height:40px;border-radius:50%;background:${bg};border:3px solid #fff;box-shadow:0 2px 8px rgba(11,42,74,.35);display:grid;place-items:center">${boatSvg}${dot}</div>`,
   })
 }
@@ -55,12 +64,12 @@ export default function MapView({ items, selectedId, onSelect }: { items: MapBoa
     const pts: L.LatLngExpression[] = []
     for (const { boat, hasOuting } of items) {
       const port = portById(boat.portId)
-      // Se muestra el puerto base, no la posición en directo. Si hay varios barcos en un puerto se separan un poco.
+      // Se muestra el puerto base, no la posición en directo.
       const n = perPort.get(port.id) ?? 0
       perPort.set(port.id, n + 1)
-      const pos: L.LatLngExpression = [port.lat - n * 0.004, port.lng + n * 0.006]
+      const pos: L.LatLngExpression = [port.lat, port.lng]
       pts.push(pos)
-      L.marker(pos, { icon: pin(boat.id === selectedId, hasOuting), title: boat.name, keyboard: true })
+      L.marker(pos, { icon: pin(boat.id === selectedId, hasOuting, ringOffset(n)), title: boat.name, keyboard: true, zIndexOffset: boat.id === selectedId ? 1000 : 0 })
         .on('click', (e) => {
           L.DomEvent.stopPropagation(e)
           onSelect(boat.id)
