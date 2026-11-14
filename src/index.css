@@ -1,0 +1,45 @@
+@import "tailwindcss";
+@import "@fontsource-variable/montserrat";
+@import "leaflet/dist/leaflet.css";
+
+@theme {
+  --font-sans: "Montserrat Variable", system-ui, sans-serif;
+  --color-ink: #0B2A4A;
+  --color-ink-soft: #46607C;
+  --color-sea: #0A6CCF;
+  --color-sea-dark: #0857A8;
+  --color-sea-50: #E8F2FC;
+  --color-foam: #F3F7FB;
+  --color-line: #DCE5EE;
+  --color-buoy: #F26B21;
+  --color-buoy-50: #FEF0E7;
+  --color-ok: #16855B;
+  --color-ok-50: #E6F5EE;
+}
+
+html, body, #root { height: 100%; }
+body {
+  margin: 0;
+  background: #DDE7F0;
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+.tnum { font-variant-numeric: tabular-nums; }
+:focus-visible { outline: 2px solid var(--color-sea); outline-offset: 2px; }
+.leaflet-container { font-family: var(--font-sans); background: #CFE3F3; }
+.pin { background: none; border: none; }
+
+/* muescas del billete de salida */
+.ticket-cut { position: relative; }
+.ticket-cut::before, .ticket-cut::after {
+  content: ""; position: absolute; top: -8px; width: 16px; height: 16px;
+  border-radius: 50%; background: var(--color-foam);
+}
+.ticket-cut::before { left: -8px; }
+.ticket-cut::after { right: -8px; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .sheet-in { animation: sheet .22s ease-out; }
+  @keyframes sheet { from { transform: translateY(16px); opacity: 0; } }
+}

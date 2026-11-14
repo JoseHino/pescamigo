@@ -1,0 +1,178 @@
+import { useState, type FormEvent } from 'react'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { Anchor, Fish, Sailboat } from 'lucide-react'
+import { Button, ErrorMsg, Field, Header, inputCls } from '../components/ui'
+import { setRole, signIn, signInDemo, signInGoogle, signUp } from '../data/store'
+import type { Role } from '../types'
+
+function GoogleMark() {
+  return (
+    <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+      <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.76h3.57c2.08-1.92 3.27-4.74 3.27-8.09z" />
+      <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.76c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84A11 11 0 0 0 12 23z" />
+      <path fill="#FBBC05" d="M5.84 14.11a6.6 6.6 0 0 1 0-4.22V7.05H2.18a11 11 0 0 0 0 9.9l3.66-2.84z" />
+      <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1A11 11 0 0 0 2.18 7.05l3.66 2.84C6.71 7.3 9.14 5.38 12 5.38z" />
+    </svg>
+  )
+}
+
+export function Welcome() {
+  const nav = useNavigate()
+  const demo = (r: Role) => {
+    signInDemo(r)
+    nav('/')
+  }
+  return (
+    <div className="flex h-full flex-col bg-ink text-white">
+      <div className="relative flex flex-1 flex-col justify-end overflow-hidden px-6 pb-8">
+        <svg className="absolute inset-x-0 bottom-0 w-full text-white/[0.06]" viewBox="0 0 440 300" fill="currentColor" aria-hidden="true">
+          <path d="M0 120q55-30 110 0t110 0 110 0 110 0v180H0z" />
+          <path d="M0 180q55-30 110 0t110 0 110 0 110 0v120H0z" />
+          <path d="M0 240q55-30 110 0t110 0 110 0 110 0v60H0z" />
+        </svg>
+        <svg className="absolute inset-x-0 top-[9%] mx-auto w-[78%]" viewBox="0 0 320 200" fill="none" aria-hidden="true">
+          <circle cx="232" cy="78" r="46" fill="#F26B21" />
+          <path d="M150 34v98H86z" fill="#fff" />
+          <path d="M164 62v70h52z" fill="#fff" opacity=".8" />
+          <path d="M60 144h200l-26 40H84z" fill="#fff" />
+          <path d="M236 144l44-66" stroke="#fff" strokeWidth="3" strokeLinecap="round" />
+          <path d="M280 78v46" stroke="#fff" strokeWidth="1.5" strokeDasharray="3 5" />
+        </svg>
+        <div className="relative">
+          <div className="mb-6 flex items-center gap-2.5">
+            <span className="grid h-10 w-10 place-items-center rounded-xl bg-white text-ink">
+              <Sailboat size={22} />
+            </span>
+            <span className="text-xl font-extrabold tracking-tight">Enrola</span>
+          </div>
+          <h1 className="text-[34px] font-extrabold leading-[1.08] tracking-tight">
+            Hay un barco que sale a pescar <span className="text-buoy">y le sobra sitio.</span>
+          </h1>
+          <p className="mt-4 text-[15px] leading-relaxed text-white/75">
+            Los propietarios publican sus salidas. Los pescadores sin barco reciben el aviso, reservan plaza y comparten gastos a bordo.
+          </p>
+        </div>
+      </div>
+      <div className="space-y-3 rounded-t-3xl bg-foam px-6 pb-7 pt-6 text-ink">
+        <Button full onClick={() => nav('/acceso?modo=registro')}>Crear cuenta</Button>
+        <Button full variant="outline" onClick={() => nav('/acceso')}>Ya tengo cuenta</Button>
+        <div className="pt-2">
+          <p className="mb-2 text-center text-xs font-semibold uppercase tracking-wide text-ink-soft">Probar la demo sin registrarse</p>
+          <div className="grid grid-cols-2 gap-3">
+            <button onClick={() => demo('fisher')} className="flex items-center justify-center gap-2 rounded-xl border border-line bg-white py-2.5 text-[13px] font-semibold hover:border-ink-soft">
+              <Fish size={16} className="text-sea" /> Como pescador
+            </button>
+            <button onClick={() => demo('owner')} className="flex items-center justify-center gap-2 rounded-xl border border-line bg-white py-2.5 text-[13px] font-semibold hover:border-ink-soft">
+              <Anchor size={16} className="text-sea" /> Como propietario
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+export function Auth() {
+  const [q] = useSearchParams()
+  const nav = useNavigate()
+  const register = q.get('modo') === 'registro'
+  const [f, setF] = useState({ name: '', username: '', email: '', password: '' })
+  const [err, setErr] = useState<string | null>(null)
+  const on = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement>) => setF({ ...f, [k]: e.target.value })
+
+  const submit = (e: FormEvent) => {
+    e.preventDefault()
+    const error = register ? signUp(f) : signIn(f.email, f.password)
+    setErr(error)
+    if (!error) nav('/')
+  }
+  const google = () => {
+    signInGoogle()
+    nav('/')
+  }
+
+  return (
+    <div className="flex h-full flex-col bg-foam">
+      <Header title={register ? 'Crear cuenta' : 'Iniciar sesión'} back />
+      <div className="flex-1 overflow-y-auto px-5 py-6">
+        <button onClick={google} className="flex w-full items-center justify-center gap-2.5 rounded-xl border border-line bg-white py-3 text-[15px] font-semibold hover:bg-foam">
+          <GoogleMark /> Continuar con Google
+        </button>
+        <p className="mt-1.5 text-center text-xs text-ink-soft">En esta demo el acceso con Google está simulado.</p>
+
+        <div className="my-5 flex items-center gap-3 text-xs font-semibold text-ink-soft">
+          <span className="h-px flex-1 bg-line" /> o con tu correo <span className="h-px flex-1 bg-line" />
+        </div>
+
+        <form onSubmit={submit} className="space-y-4">
+          {register && (
+            <>
+              <Field label="Nombre y apellido">
+                <input className={inputCls} value={f.name} onChange={on('name')} autoComplete="name" />
+              </Field>
+              <Field label="Nombre de usuario" hint="Es el que verán los demás.">
+                <input className={inputCls} value={f.username} onChange={on('username')} autoCapitalize="none" autoComplete="username" />
+              </Field>
+            </>
+          )}
+          <Field label={register ? 'Correo electrónico' : 'Correo o nombre de usuario'}>
+            <input className={inputCls} value={f.email} onChange={on('email')} type={register ? 'email' : 'text'} autoCapitalize="none" autoComplete="email" />
+          </Field>
+          <Field label="Contraseña" hint={register ? 'Mínimo 8 caracteres.' : undefined}>
+            <input className={inputCls} value={f.password} onChange={on('password')} type="password" autoComplete={register ? 'new-password' : 'current-password'} />
+          </Field>
+          <ErrorMsg>{err}</ErrorMsg>
+          <Button full type="submit">{register ? 'Crear cuenta' : 'Iniciar sesión'}</Button>
+        </form>
+
+        <p className="mt-5 text-center text-sm text-ink-soft">
+          {register ? '¿Ya tienes cuenta? ' : '¿Aún no tienes cuenta? '}
+          <Link replace to={register ? '/acceso' : '/acceso?modo=registro'} className="font-semibold text-sea">
+            {register ? 'Inicia sesión' : 'Crear cuenta'}
+          </Link>
+        </p>
+      </div>
+    </div>
+  )
+}
+
+export function RoleSetup() {
+  const [role, setR] = useState<Role | null>(null)
+  const options: { id: Role; icon: typeof Fish; title: string; text: string }[] = [
+    { id: 'fisher', icon: Fish, title: 'Quiero salir a pescar', text: 'No tengo barco. Recibo avisos de salidas cerca y reservo plaza.' },
+    { id: 'owner', icon: Anchor, title: 'Tengo barco', text: 'Publico mis salidas con fecha y horario y comparto gastos con quien venga.' },
+  ]
+  return (
+    <div className="flex h-full flex-col bg-foam px-5 py-8">
+      <h1 className="text-2xl font-extrabold tracking-tight">¿Cómo vas a usar Enrola?</h1>
+      <p className="mt-2 text-sm text-ink-soft">Elige uno. Define lo que ves en la app.</p>
+      <div className="mt-6 flex-1 space-y-3">
+        {options.map((o) => (
+          <button
+            key={o.id}
+            onClick={() => setR(o.id)}
+            aria-pressed={role === o.id}
+            className={`flex w-full items-start gap-4 rounded-2xl border-2 bg-white p-4 text-left transition ${role === o.id ? 'border-sea' : 'border-line'}`}
+          >
+            <span className={`grid h-12 w-12 shrink-0 place-items-center rounded-xl ${role === o.id ? 'bg-sea text-white' : 'bg-sea-50 text-sea'}`}>
+              <o.icon size={22} />
+            </span>
+            <span>
+              <span className="block text-base font-bold">{o.title}</span>
+              <span className="mt-0.5 block text-sm text-ink-soft">{o.text}</span>
+            </span>
+          </button>
+        ))}
+      </div>
+      <Button
+        full
+        disabled={!role}
+        onClick={() => {
+          if (role) setRole(role)
+        }}
+      >
+        Continuar
+      </Button>
+    </div>
+  )
+}
