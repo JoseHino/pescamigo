@@ -1,7 +1,7 @@
 import { StrictMode, type ReactNode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { HashRouter, NavLink, Navigate, Outlet, Route, Routes } from 'react-router-dom'
-import { Bell, CalendarDays, CirclePlus, Map as MapIcon, Sailboat, Ticket, User as UserIcon, Waves } from 'lucide-react'
+import { Bell, CalendarDays, CirclePlus, Map as MapIcon, Ticket, User as UserIcon, Waves } from 'lucide-react'
 import './index.css'
 import { useAppState, useMe } from './data/store'
 import { Auth, RoleSetup, Welcome } from './pages/auth'
@@ -59,9 +59,7 @@ function Tabs({ detail = false }: { detail?: boolean }) {
         className={`${detail ? 'hidden' : 'grid'} order-last shrink-0 grid-cols-5 border-t border-line bg-white pb-[env(safe-area-inset-bottom)] lg:order-first lg:flex lg:w-60 lg:flex-col lg:gap-1 lg:border-r lg:border-t-0 lg:p-4`}
       >
         <div className="mb-6 hidden items-center gap-2.5 px-2 pt-2 lg:flex">
-          <span className="grid h-9 w-9 place-items-center rounded-xl bg-ink text-white">
-            <Sailboat size={20} />
-          </span>
+          <img src="./logo-192.png" alt="" className="h-10 w-10" />
           <span className="text-lg font-extrabold tracking-tight">Pescamigo</span>
         </div>
         {tabs.map((t) => (
@@ -121,7 +119,7 @@ function Boot() {
   if (!ready) {
     return (
       <div className="grid h-full place-items-center bg-ink text-white" role="status">
-        <span className="text-xl font-extrabold tracking-tight">Pescamigo</span>
+        <img src="./logo-192.png" alt="Pescamigo" className="h-28 w-28" />
       </div>
     )
   }

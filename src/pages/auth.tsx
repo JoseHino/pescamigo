@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { Anchor, Fish, Sailboat } from 'lucide-react'
+import { Anchor, Fish } from 'lucide-react'
 import { Button, ErrorMsg, Field, Header, inputCls } from '../components/ui'
 import { setRole, signIn, signInGoogle, signUp } from '../data/store'
 import { GOOGLE_ENABLED } from '../lib/supabase'
@@ -27,21 +27,12 @@ export function Welcome() {
           <path d="M0 180q55-30 110 0t110 0 110 0 110 0v120H0z" />
           <path d="M0 240q55-30 110 0t110 0 110 0 110 0v60H0z" />
         </svg>
-        <svg className="absolute inset-x-0 top-[9%] mx-auto w-[78%] lg:inset-x-auto lg:right-16 lg:top-16 lg:mx-0 lg:w-[340px]" viewBox="0 0 320 200" fill="none" aria-hidden="true">
-          <circle cx="232" cy="78" r="46" fill="#F26B21" />
-          <path d="M150 34v98H86z" fill="#fff" />
-          <path d="M164 62v70h52z" fill="#fff" opacity=".8" />
-          <path d="M60 144h200l-26 40H84z" fill="#fff" />
-          <path d="M236 144l44-66" stroke="#fff" strokeWidth="3" strokeLinecap="round" />
-          <path d="M280 78v46" stroke="#fff" strokeWidth="1.5" strokeDasharray="3 5" />
-        </svg>
+        <img
+          src="./logo-512.png"
+          alt="Pescamigo"
+          className="absolute inset-x-0 top-[7%] mx-auto w-[46%] max-w-[210px] lg:inset-x-auto lg:right-16 lg:top-16 lg:mx-0 lg:w-[260px] lg:max-w-none"
+        />
         <div className="relative lg:max-w-xl">
-          <div className="mb-6 flex items-center gap-2.5">
-            <span className="grid h-10 w-10 place-items-center rounded-xl bg-white text-ink">
-              <Sailboat size={22} />
-            </span>
-            <span className="text-xl font-extrabold tracking-tight">Pescamigo</span>
-          </div>
           <h1 className="text-[34px] font-extrabold leading-[1.08] tracking-tight lg:text-[52px]">
             Hay un barco que sale a pescar <span className="text-buoy">y le sobra sitio.</span>
           </h1>
