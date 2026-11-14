@@ -1,11 +1,14 @@
 import { useMemo, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
-import { BadgeCheck, Banknote, CalendarX, ChevronRight, Clock, MapPin, MessageCircle, Repeat, Ruler, ShieldCheck, Users, X } from 'lucide-react'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import {
+  BadgeCheck, Banknote, CalendarDays, CalendarX, ChevronLeft, ChevronRight, Clock, List, MapPin, MessageCircle, Repeat, Ruler, ShieldCheck, Users, X,
+} from 'lucide-react'
 import MapView from '../components/MapView'
-import { Button, Chip, Empty, Header, OutingTicket, Rating, Stars, StatusBadge } from '../components/ui'
+import { Button, Chip, Empty, Header, OutingTicket, Rating, SectionTitle, Stars, StatusBadge } from '../components/ui'
 import { boatRating, bookingWindow, conversationFor, myActiveBooking, seatsLeft, upcomingOutings, useAppState, useMe } from '../data/store'
 import { PORTS, portById } from '../data/seed'
-import { FISHING_TYPES, dayLabel, duration, euro, longDate, shortDate } from '../lib/format'
+import { FISHING_TYPES, WEEKDAYS, dayLabel, duration, euro, isoDate, longDate, monthLabel, shortDate } from '../lib/format'
+import type { Outing } from '../types'
 
 export function MapPage() {
   const s = useAppState()
@@ -75,16 +78,47 @@ export function MapPage() {
 
 export function OutingsPage() {
   const s = useAppState()
+  // La vista y el día elegido van en la dirección: al volver de una salida se recupera lo que se estaba mirando.
+  const [q, setQ] = useSearchParams()
+  const view = q.get('vista') === 'calendario' ? 'calendario' : 'lista'
+  const setParam = (key: string, value: string | null) => {
+    const next = new URLSearchParams(q)
+    if (value) next.set(key, value)
+    else next.delete(key)
+    setQ(next, { replace: true })
+  }
   const [port, setPort] = useState<string | null>(null)
   const [type, setType] = useState<string | null>(null)
   const list = upcomingOutings(s).filter((o) => {
     return (!port || o.portId === port) && (!type || o.type === type)
   })
   const usedPorts = PORTS.filter((p) => upcomingOutings(s).some((o) => o.portId === p.id))
+  const views = [
+    { v: 'lista', label: 'Lista', Icon: List },
+    { v: 'calendario', label: 'Calendario', Icon: CalendarDays },
+  ] as const
+  const empty = <Empty icon={<CalendarX size={24} />} title="Ninguna salida con esos filtros" text="Quita algún filtro o activa los avisos para enterarte cuando se publique una." />
   return (
     <div className="flex h-full flex-col">
       <Header title="Salidas publicadas" />
       <div className="border-b border-line bg-white py-2.5">
+        <div className="px-4 pb-2.5 lg:px-6">
+          <div role="group" aria-label="Cómo ver las salidas" className="grid grid-cols-2 rounded-xl bg-foam p-1 sm:inline-grid sm:w-72">
+            {views.map(({ v, label, Icon }) => (
+              <button
+                key={v}
+                type="button"
+                aria-pressed={view === v}
+                onClick={() => setParam('vista', v === 'lista' ? null : v)}
+                className={`flex items-center justify-center gap-1.5 rounded-lg py-1.5 text-[13px] font-semibold transition ${
+                  view === v ? 'bg-white text-ink shadow-sm' : 'text-ink-soft hover:text-ink'
+                }`}
+              >
+                <Icon size={15} /> {label}
+              </button>
+            ))}
+          </div>
+        </div>
         <div className="flex gap-2 overflow-x-auto px-4 pb-2 [scrollbar-width:none] lg:flex-wrap lg:px-6">
           <Chip active={!port} onClick={() => setPort(null)}>Todos los puertos</Chip>
           {usedPorts.map((p) => (
@@ -98,12 +132,124 @@ export function OutingsPage() {
           ))}
         </div>
       </div>
-      <div className="cards flex-1 space-y-3 overflow-y-auto p-4">
-        {list.length === 0 ? (
-          <Empty icon={<CalendarX size={24} />} title="Ninguna salida con esos filtros" text="Quita algún filtro o activa los avisos para enterarte cuando se publique una." />
-        ) : (
-          list.map((o) => <OutingTicket key={o.id} outing={o} />)
-        )}
+      {view === 'lista' ? (
+        <div className="cards flex-1 space-y-3 overflow-y-auto p-4">
+          {list.length === 0 ? empty : list.map((o) => <OutingTicket key={o.id} outing={o} />)}
+        </div>
+      ) : list.length === 0 ? (
+        <div className="flex-1 overflow-y-auto p-4">{empty}</div>
+      ) : (
+        <OutingsCalendar list={list} day={q.get('dia')} onDay={(d) => setParam('dia', d)} />
+      )}
+    </div>
+  )
+}
+
+/** Vista de calendario de las salidas publicadas: el mes con los días que tienen salida y, debajo, las del día elegido. */
+function OutingsCalendar({ list, day, onDay }: { list: Outing[]; day: string | null; onDay: (d: string) => void }) {
+  const s = useAppState()
+  const now = new Date()
+  const todayIso = isoDate(now)
+  const byDay = new Map<string, Outing[]>()
+  for (const o of list) byDay.set(o.date, [...(byDay.get(o.date) ?? []), o])
+
+  // Día elegido: el de la dirección o, si no hay, el primero con salida.
+  const sel = day && /^\d{4}-\d{2}-\d{2}$/.test(day) && day >= todayIso ? day : list[0].date
+  const y = Number(sel.slice(0, 4))
+  const m = Number(sel.slice(5, 7)) - 1
+  const monthsAhead = (y - now.getFullYear()) * 12 + (m - now.getMonth())
+  const move = (delta: number) => {
+    const first = new Date(y, m + delta, 1)
+    const prefix = isoDate(first).slice(0, 7)
+    const firstWithOuting = list.find((o) => o.date.startsWith(prefix))?.date
+    onDay(firstWithOuting ?? (prefix === todayIso.slice(0, 7) ? todayIso : isoDate(first)))
+  }
+
+  // Rejilla del mes empezando en lunes.
+  const lead = (new Date(y, m, 1).getDay() + 6) % 7
+  const daysInMonth = new Date(y, m + 1, 0).getDate()
+  const cells: (string | null)[] = [
+    ...Array.from({ length: lead }, () => null),
+    ...Array.from({ length: daysInMonth }, (_, i) => isoDate(new Date(y, m, i + 1))),
+  ]
+  const inMonth = list.filter((o) => o.date.startsWith(sel.slice(0, 7))).length
+  const dayList = byDay.get(sel) ?? []
+  const next = list.find((o) => o.date > sel)
+
+  return (
+    <div className="flex-1 overflow-y-auto p-4 lg:p-6">
+      <div className="mx-auto grid max-w-5xl gap-5 lg:grid-cols-[380px_minmax(0,1fr)] lg:items-start lg:gap-6">
+        <div className="rounded-2xl border border-line bg-white p-3 sm:p-4 lg:sticky lg:top-0">
+          <div className="mb-3 flex items-center justify-between gap-2">
+            <button type="button" onClick={() => move(-1)} disabled={monthsAhead <= 0} aria-label="Mes anterior" className="grid h-9 w-9 place-items-center rounded-full hover:bg-foam disabled:opacity-30 disabled:hover:bg-transparent">
+              <ChevronLeft size={18} />
+            </button>
+            <div className="text-center">
+              <p className="text-[15px] font-bold">{monthLabel(y, m)}</p>
+              <p className="text-[11px] text-ink-soft">{inMonth ? `${inMonth} ${inMonth === 1 ? 'salida' : 'salidas'} este mes` : 'Sin salidas este mes'}</p>
+            </div>
+            <button type="button" onClick={() => move(1)} disabled={monthsAhead >= 12} aria-label="Mes siguiente" className="grid h-9 w-9 place-items-center rounded-full hover:bg-foam disabled:opacity-30 disabled:hover:bg-transparent">
+              <ChevronRight size={18} />
+            </button>
+          </div>
+          <div className="grid grid-cols-7 gap-1 text-center text-[11px] font-semibold text-ink-soft">
+            {WEEKDAYS.map((d) => <span key={d.v} aria-hidden="true">{d.short}</span>)}
+          </div>
+          <div className="mt-1 grid grid-cols-7 gap-1">
+            {cells.map((d, i) => {
+              if (!d) return <span key={`x${i}`} />
+              const os = byDay.get(d) ?? []
+              const free = os.some((o) => seatsLeft(s, o) > 0)
+              const past = d < todayIso
+              const isSel = d === sel
+              return (
+                <button
+                  key={d}
+                  type="button"
+                  disabled={past}
+                  onClick={() => onDay(d)}
+                  aria-pressed={isSel}
+                  aria-label={`${longDate(d)}, ${os.length ? `${os.length} ${os.length === 1 ? 'salida' : 'salidas'}${free ? '' : ', completo'}` : 'sin salidas'}`}
+                  className={`flex aspect-square min-w-0 flex-col items-center justify-center rounded-lg text-[13px] font-semibold transition ${
+                    isSel ? 'bg-ink text-white'
+                      : past ? 'text-ink-soft/40'
+                      : os.length ? (free ? 'bg-sea-50 text-sea-dark hover:brightness-95' : 'bg-foam text-ink hover:brightness-95')
+                      : 'text-ink-soft hover:bg-foam'
+                  } ${d === todayIso && !isSel ? 'ring-1 ring-sea' : ''}`}
+                >
+                  <span className="tnum">{Number(d.slice(8))}</span>
+                  <span className="mt-0.5 flex h-1.5 gap-0.5">
+                    {os.slice(0, 3).map((o) => (
+                      <span key={o.id} className={`h-1.5 w-1.5 rounded-full ${isSel ? 'bg-white' : seatsLeft(s, o) > 0 ? 'bg-sea' : 'bg-ink-soft/40'}`} />
+                    ))}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+          <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-ink-soft">
+            <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-sea" /> Salida con plazas</span>
+            <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-ink-soft/40" /> Salida completa</span>
+          </div>
+        </div>
+
+        <section className="min-w-0 space-y-3">
+          <SectionTitle count={dayList.length || undefined}>{longDate(sel)}</SectionTitle>
+          {dayList.length ? (
+            <div className="grid gap-3 [&>*]:min-w-0">
+              {dayList.map((o) => <OutingTicket key={o.id} outing={o} />)}
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-dashed border-line p-4 text-sm text-ink-soft">
+              <p>Ese día no hay salidas publicadas.</p>
+              {next && (
+                <button type="button" onClick={() => onDay(next.date)} className="mt-2 flex items-center gap-1 font-semibold text-sea">
+                  Ver la siguiente: {shortDate(next.date)} <ChevronRight size={15} />
+                </button>
+              )}
+            </div>
+          )}
+        </section>
       </div>
     </div>
   )
