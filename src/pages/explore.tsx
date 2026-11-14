@@ -124,6 +124,28 @@ export function OutingsPage() {
   )
 }
 
+/** Pie de cada salida para el pescador: pedir plaza sin tener que abrir la salida, o cómo va su solicitud. */
+function BookFooter({ o }: { o: Outing }) {
+  const s = useAppState()
+  const me = useMe()
+  const nav = useNavigate()
+  const boat = s.boats.find((b) => b.id === o.boatId)
+  if (!me || !boat) return null
+  const mine = myActiveBooking(s, o.id, me.id)
+  if (mine) {
+    return (
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <span className="flex items-center gap-2 text-[13px] font-semibold">Tu solicitud <StatusBadge status={mine.status} /></span>
+        <Link to="/reservas" className="text-[13px] font-semibold text-sea">Mis reservas</Link>
+      </div>
+    )
+  }
+  const win = bookingWindow(boat, o)
+  if (!win.open) return <p className="text-center text-[13px] font-semibold text-ink-soft">{win.reason}</p>
+  if (seatsLeft(s, o) === 0) return <p className="text-center text-[13px] font-semibold text-ink-soft">Salida completa</p>
+  return <Button full variant="accent" onClick={() => nav(`/reservar/${o.id}`)}>Solicitar plaza</Button>
+}
+
 /** Vista de calendario de las salidas publicadas: el mes con los días que tienen salida y, debajo, las del día elegido. */
 function OutingsCalendar({ list, filtered, day, onDay }: { list: Outing[]; filtered: boolean; day: string | null; onDay: (d: string) => void }) {
   const s = useAppState()
@@ -131,16 +153,30 @@ function OutingsCalendar({ list, filtered, day, onDay }: { list: Outing[]; filte
   const todayIso = isoDate(now)
   const byDay = new Map<string, Outing[]>()
   for (const o of list) byDay.set(o.date, [...(byDay.get(o.date) ?? []), o])
+  // Se puede pedir plaza: quedan plazas y las reservas están abiertas (no demasiado pronto ni demasiado tarde).
+  const bookable = (o: Outing) => {
+    const b = s.boats.find((x) => x.id === o.boatId)
+    return !!b && seatsLeft(s, o) > 0 && bookingWindow(b, o).open
+  }
 
-  // Día elegido: el de la dirección o, si no hay, el primero con salida (u hoy si no hay ninguna).
-  const sel = day && /^\d{4}-\d{2}-\d{2}$/.test(day) && day >= todayIso ? day : (list[0]?.date ?? todayIso)
+  // Día elegido: el de la dirección o, si no hay, el primero en el que se puede pedir plaza.
+  const firstDay = (list.find(bookable) ?? list[0])?.date ?? todayIso
+  const sel = day && /^\d{4}-\d{2}-\d{2}$/.test(day) && day >= todayIso ? day : firstDay
+  const pick = (d: string, hasOutings: boolean) => {
+    onDay(d)
+    // En el móvil las salidas del día quedan debajo del calendario: se baja hasta ellas.
+    if (hasOutings && window.innerWidth < 1024) {
+      requestAnimationFrame(() => document.getElementById('salidas-del-dia')?.scrollIntoView({ behavior: 'smooth', block: 'start' }))
+    }
+  }
   const y = Number(sel.slice(0, 4))
   const m = Number(sel.slice(5, 7)) - 1
   const monthsAhead = (y - now.getFullYear()) * 12 + (m - now.getMonth())
   const move = (delta: number) => {
     const first = new Date(y, m + delta, 1)
     const prefix = isoDate(first).slice(0, 7)
-    const firstWithOuting = list.find((o) => o.date.startsWith(prefix))?.date
+    const inPrefix = (o: Outing) => o.date.startsWith(prefix)
+    const firstWithOuting = (list.find((o) => inPrefix(o) && bookable(o)) ?? list.find(inPrefix))?.date
     onDay(firstWithOuting ?? (prefix === todayIso.slice(0, 7) ? todayIso : isoDate(first)))
   }
 
@@ -178,7 +214,7 @@ function OutingsCalendar({ list, filtered, day, onDay }: { list: Outing[]; filte
             {cells.map((d, i) => {
               if (!d) return <span key={`x${i}`} />
               const os = byDay.get(d) ?? []
-              const free = os.some((o) => seatsLeft(s, o) > 0)
+              const free = os.some(bookable)
               const past = d < todayIso
               const isSel = d === sel
               return (
@@ -186,9 +222,9 @@ function OutingsCalendar({ list, filtered, day, onDay }: { list: Outing[]; filte
                   key={d}
                   type="button"
                   disabled={past}
-                  onClick={() => onDay(d)}
+                  onClick={() => pick(d, os.length > 0)}
                   aria-pressed={isSel}
-                  aria-label={`${longDate(d)}, ${os.length ? `${os.length} ${os.length === 1 ? 'salida' : 'salidas'}${free ? '' : ', completo'}` : 'sin salidas'}`}
+                  aria-label={`${longDate(d)}, ${os.length ? `${os.length} ${os.length === 1 ? 'salida' : 'salidas'}${free ? '' : ', sin plazas que pedir'}` : 'sin salidas'}`}
                   className={`flex aspect-square min-w-0 flex-col items-center justify-center rounded-lg text-[13px] font-semibold transition ${
                     isSel ? 'bg-ink text-white'
                       : past ? 'text-ink-soft/40'
@@ -199,7 +235,7 @@ function OutingsCalendar({ list, filtered, day, onDay }: { list: Outing[]; filte
                   <span className="tnum">{Number(d.slice(8))}</span>
                   <span className="mt-0.5 flex h-1.5 gap-0.5">
                     {os.slice(0, 3).map((o) => (
-                      <span key={o.id} className={`h-1.5 w-1.5 rounded-full ${isSel ? 'bg-white' : seatsLeft(s, o) > 0 ? 'bg-sea' : 'bg-ink-soft/40'}`} />
+                      <span key={o.id} className={`h-1.5 w-1.5 rounded-full ${isSel ? 'bg-white' : bookable(o) ? 'bg-sea' : 'bg-ink-soft/40'}`} />
                     ))}
                   </span>
                 </button>
@@ -207,16 +243,16 @@ function OutingsCalendar({ list, filtered, day, onDay }: { list: Outing[]; filte
             })}
           </div>
           <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-ink-soft">
-            <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-sea" /> Salida con plazas</span>
-            <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-ink-soft/40" /> Salida completa</span>
+            <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-sea" /> Puedes pedir plaza</span>
+            <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-ink-soft/40" /> Completa o reservas cerradas</span>
           </div>
         </div>
 
-        <section className="min-w-0 space-y-3">
+        <section id="salidas-del-dia" className="min-w-0 scroll-mt-3 space-y-3">
           <SectionTitle count={dayList.length || undefined}>{longDate(sel)}</SectionTitle>
           {dayList.length ? (
             <div className="grid gap-3 [&>*]:min-w-0">
-              {dayList.map((o) => <OutingTicket key={o.id} outing={o} />)}
+              {dayList.map((o) => <OutingTicket key={o.id} outing={o} footer={<BookFooter o={o} />} />)}
             </div>
           ) : (
             <div className="rounded-2xl border border-dashed border-line p-4 text-sm text-ink-soft">
@@ -376,6 +412,8 @@ export function BoatProfile() {
   const { id } = useParams()
   const s = useAppState()
   const [viewer, setViewer] = useState<number | null>(null)
+  const [allOutings, setAllOutings] = useState(false)
+  const isFisher = s.me?.role === 'fisher'
   const boat = s.boats.find((b) => b.id === id)
   if (!boat) return <NotFound what="No encontramos este barco." />
   const port = portById(boat.portId)
@@ -473,7 +511,16 @@ export function BoatProfile() {
           <section>
             <h3 className="mb-2.5 text-base font-bold">Próximas salidas</h3>
             {outings.length ? (
-              <div className="space-y-3">{outings.map((o) => <OutingTicket key={o.id} outing={o} />)}</div>
+              <div className="space-y-3">
+                {(allOutings ? outings : outings.slice(0, 5)).map((o) => (
+                  <OutingTicket key={o.id} outing={o} footer={isFisher ? <BookFooter o={o} /> : undefined} />
+                ))}
+                {outings.length > 5 && (
+                  <button type="button" onClick={() => setAllOutings(!allOutings)} className="w-full rounded-xl border border-line bg-white py-2.5 text-[13px] font-semibold text-sea hover:bg-foam">
+                    {allOutings ? 'Ver menos' : `Ver las ${outings.length} salidas`}
+                  </button>
+                )}
+              </div>
             ) : (
               <p className="rounded-2xl border border-dashed border-line p-4 text-sm text-ink-soft">Este barco no tiene salidas publicadas ahora mismo.</p>
             )}
