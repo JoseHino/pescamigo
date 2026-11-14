@@ -101,15 +101,15 @@ export function OutingsPage() {
   const list = upcomingOutings(s).filter((o) => {
     return (!port || o.portId === port) && (!type || o.type === type)
   })
-  const usedPorts = PORTS.filter((p) => upcomingOutings(s).some((o) => o.portId === p.id))
   return (
     <div className="flex h-full flex-col">
       <Header title="Salidas publicadas" />
       <div className="border-b border-line bg-white py-2.5">
+        {/* Todos los puertos, tengan o no salidas ahora: así el pescador ve dónde puede salir. */}
         <div className="flex gap-2 overflow-x-auto px-4 pb-2 [scrollbar-width:none] lg:flex-wrap lg:px-6">
           <Chip active={!port} onClick={() => setPort(null)}>Todos los puertos</Chip>
-          {usedPorts.map((p) => (
-            <Chip key={p.id} active={port === p.id} onClick={() => setPort(port === p.id ? null : p.id)}>{p.name}</Chip>
+          {PORTS.map((p) => (
+            <Chip key={p.id} active={port === p.id} onClick={() => setPort(port === p.id ? null : p.id)} label={`${p.name} (${p.town})`}>{p.short}</Chip>
           ))}
         </div>
         <div className="flex gap-2 overflow-x-auto px-4 [scrollbar-width:none] lg:flex-wrap lg:px-6">

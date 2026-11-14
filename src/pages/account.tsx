@@ -234,7 +234,7 @@ export function Profile() {
                 <div>
                   <p className="mb-2 text-[13px] font-semibold">Puertos que me interesan</p>
                   <div className="flex flex-wrap gap-2">
-                    {PORTS.map((p) => <Chip key={p.id} active={me.prefs.ports.includes(p.id)} onClick={() => toggle('ports', p.id)}>{p.name}</Chip>)}
+                    {PORTS.map((p) => <Chip key={p.id} active={me.prefs.ports.includes(p.id)} onClick={() => toggle('ports', p.id)} label={`${p.name} (${p.town})`}>{p.short}</Chip>)}
                   </div>
                   {!me.prefs.ports.length && <p className="mt-1.5 text-xs text-ink-soft">Sin elegir ninguno recibes las de todos los puertos.</p>}
                 </div>

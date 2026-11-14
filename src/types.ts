@@ -16,7 +16,15 @@ export interface User extends PublicUser {
   prefs: { ports: string[]; types: string[]; push: boolean }
 }
 
-export interface Port { id: string; name: string; town: string; lat: number; lng: number }
+export interface Port {
+  id: string
+  name: string
+  /** Nombre corto para los botones de filtro ("Banús", "Cabopino"…). */
+  short: string
+  town: string
+  lat: number
+  lng: number
+}
 
 export interface Boat {
   id: string
