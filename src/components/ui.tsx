@@ -173,7 +173,8 @@ export function OutingTicket({ outing, footer, to }: { outing: Outing; footer?: 
         <div className="flex items-center justify-between gap-2 text-[12px] font-semibold uppercase tracking-wide">
           <span className="truncate text-sea">{dayLabel(outing.date)}</span>
           <span className="flex shrink-0 items-center gap-1.5">
-            {outing.ruleId && (
+            {/* Que la salida sea habitual solo le interesa al patrón. */}
+            {outing.ruleId && s.me?.id === boat.ownerId && (
               <span className="flex items-center gap-1 rounded-full bg-foam px-2 py-0.5 normal-case tracking-normal text-ink-soft" title="Salida habitual">
                 <Repeat size={11} /> Habitual
               </span>

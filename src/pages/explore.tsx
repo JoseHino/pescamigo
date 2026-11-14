@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import {
-  BadgeCheck, Banknote, CalendarDays, CalendarX, ChevronLeft, ChevronRight, Clock, List, MapPin, MessageCircle, Repeat, Ruler, ShieldCheck, Users, X,
+  BadgeCheck, Banknote, CalendarX, ChevronLeft, ChevronRight, Clock, MapPin, MessageCircle, Repeat, Ruler, ShieldCheck, Users, X,
 } from 'lucide-react'
 import MapView from '../components/MapView'
 import { Button, Chip, Empty, Header, OutingTicket, Rating, SectionTitle, Stars, StatusBadge } from '../components/ui'
@@ -78,47 +78,18 @@ export function MapPage() {
 
 export function OutingsPage() {
   const s = useAppState()
-  // La vista y el día elegido van en la dirección: al volver de una salida se recupera lo que se estaba mirando.
+  // El día elegido va en la dirección: al volver de una salida se recupera el que se estaba mirando.
   const [q, setQ] = useSearchParams()
-  const view = q.get('vista') === 'calendario' ? 'calendario' : 'lista'
-  const setParam = (key: string, value: string | null) => {
-    const next = new URLSearchParams(q)
-    if (value) next.set(key, value)
-    else next.delete(key)
-    setQ(next, { replace: true })
-  }
   const [port, setPort] = useState<string | null>(null)
   const [type, setType] = useState<string | null>(null)
   const list = upcomingOutings(s).filter((o) => {
     return (!port || o.portId === port) && (!type || o.type === type)
   })
   const usedPorts = PORTS.filter((p) => upcomingOutings(s).some((o) => o.portId === p.id))
-  const views = [
-    { v: 'lista', label: 'Lista', Icon: List },
-    { v: 'calendario', label: 'Calendario', Icon: CalendarDays },
-  ] as const
-  const empty = <Empty icon={<CalendarX size={24} />} title="Ninguna salida con esos filtros" text="Quita algún filtro o activa los avisos para enterarte cuando se publique una." />
   return (
     <div className="flex h-full flex-col">
       <Header title="Salidas publicadas" />
       <div className="border-b border-line bg-white py-2.5">
-        <div className="px-4 pb-2.5 lg:px-6">
-          <div role="group" aria-label="Cómo ver las salidas" className="grid grid-cols-2 rounded-xl bg-foam p-1 sm:inline-grid sm:w-72">
-            {views.map(({ v, label, Icon }) => (
-              <button
-                key={v}
-                type="button"
-                aria-pressed={view === v}
-                onClick={() => setParam('vista', v === 'lista' ? null : v)}
-                className={`flex items-center justify-center gap-1.5 rounded-lg py-1.5 text-[13px] font-semibold transition ${
-                  view === v ? 'bg-white text-ink shadow-sm' : 'text-ink-soft hover:text-ink'
-                }`}
-              >
-                <Icon size={15} /> {label}
-              </button>
-            ))}
-          </div>
-        </div>
         <div className="flex gap-2 overflow-x-auto px-4 pb-2 [scrollbar-width:none] lg:flex-wrap lg:px-6">
           <Chip active={!port} onClick={() => setPort(null)}>Todos los puertos</Chip>
           {usedPorts.map((p) => (
@@ -132,14 +103,12 @@ export function OutingsPage() {
           ))}
         </div>
       </div>
-      {view === 'lista' ? (
-        <div className="cards flex-1 space-y-3 overflow-y-auto p-4">
-          {list.length === 0 ? empty : list.map((o) => <OutingTicket key={o.id} outing={o} />)}
+      {list.length === 0 ? (
+        <div className="flex-1 overflow-y-auto p-4">
+          <Empty icon={<CalendarX size={24} />} title="Ninguna salida con esos filtros" text="Quita algún filtro o activa los avisos para enterarte cuando se publique una." />
         </div>
-      ) : list.length === 0 ? (
-        <div className="flex-1 overflow-y-auto p-4">{empty}</div>
       ) : (
-        <OutingsCalendar list={list} day={q.get('dia')} onDay={(d) => setParam('dia', d)} />
+        <OutingsCalendar list={list} day={q.get('dia')} onDay={(d) => setQ({ dia: d }, { replace: true })} />
       )}
     </div>
   )
@@ -287,7 +256,8 @@ export function OutingDetail() {
           <div>
             <div className="flex flex-wrap items-center gap-2">
               <span className="rounded-full bg-sea-50 px-2.5 py-1 text-xs font-semibold text-sea-dark">{o.type}</span>
-              {o.ruleId && (
+              {/* Que la salida sea habitual solo le interesa al patrón. */}
+              {o.ruleId && isOwner && (
                 <span className="flex items-center gap-1 rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-ink-soft ring-1 ring-line">
                   <Repeat size={12} /> Salida habitual
                 </span>
@@ -296,11 +266,7 @@ export function OutingDetail() {
             <h2 className="mt-2 text-2xl font-extrabold tracking-tight">
               <span className="tnum">{o.start}</span> <span className="text-ink-soft">→</span> <span className="tnum">{o.end}</span>
             </h2>
-            <p className="mt-1 text-[13px] text-ink-soft">
-              {o.ruleId
-                ? 'Es una fecha prevista del calendario habitual del patrón: la plaza queda confirmada cuando el patrón acepta tu solicitud.'
-                : 'El patrón confirma cada solicitud de plaza.'}
-            </p>
+            <p className="mt-1 text-[13px] text-ink-soft">El patrón confirma cada solicitud de plaza.</p>
           </div>
 
           <ul className="divide-y divide-line rounded-2xl border border-line bg-white">
