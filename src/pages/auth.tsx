@@ -2,7 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { Anchor, Fish } from 'lucide-react'
 import { Button, ErrorMsg, Field, Header, inputCls } from '../components/ui'
-import { NEEDS_CODE, resendCode, setRole, signIn, signInGoogle, signUp, verifyEmail } from '../data/store'
+import { NEEDS_CODE, confirmPasswordReset, requestPasswordReset, resendCode, setRole, signIn, signInGoogle, signUp, verifyEmail } from '../data/store'
 import { GOOGLE_ENABLED } from '../lib/supabase'
 import type { Role } from '../types'
 
@@ -62,6 +62,9 @@ export function Auth() {
   const [codeStep, setCodeStep] = useState(false)
   const [code, setCode] = useState('')
   const [info, setInfo] = useState<string | null>(null)
+  // Cambio de contraseña: 'email' pide el correo, 'code' pide el código y la contraseña nueva.
+  const [reset, setReset] = useState<null | 'email' | 'code'>(null)
+  const [newPass, setNewPass] = useState('')
   const on = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement>) => setF({ ...f, [k]: e.target.value })
 
   const submit = async (e: FormEvent) => {
@@ -97,6 +100,83 @@ export function Auth() {
   }
   const google = async () => setErr(await signInGoogle())
 
+  const startReset = () => {
+    setErr(null)
+    setInfo(null)
+    setCode('')
+    setNewPass('')
+    setReset('email')
+  }
+  const sendReset = async (e?: FormEvent) => {
+    e?.preventDefault()
+    if (busy) return
+    setBusy(true)
+    setErr(null)
+    setInfo(null)
+    const error = await requestPasswordReset(f.email)
+    setBusy(false)
+    if (error) return setErr(error)
+    if (reset === 'code') setInfo('Te hemos enviado un código nuevo.')
+    setReset('code')
+  }
+  const finishReset = async (e: FormEvent) => {
+    e.preventDefault()
+    if (busy) return
+    setBusy(true)
+    setErr(null)
+    setInfo(null)
+    const error = await confirmPasswordReset(f.email, code, newPass)
+    setBusy(false)
+    // Si va bien, la sesión se inicia y la app pasa sola a la pantalla siguiente.
+    setErr(error === NEEDS_CODE ? null : error)
+  }
+
+  if (reset) {
+    return (
+      <div className="flex h-full flex-col bg-foam">
+        <Header title="Cambiar la contraseña" />
+        {reset === 'email' ? (
+          <form onSubmit={sendReset} className="col-narrow flex-1 space-y-4 overflow-y-auto px-5 py-6 lg:py-12">
+            <p className="text-sm leading-relaxed">Escribe el correo con el que te registraste y te enviaremos un código para poner una contraseña nueva.</p>
+            <Field label="Correo electrónico">
+              <input className={inputCls} value={f.email} onChange={on('email')} type="email" autoCapitalize="none" autoComplete="email" autoFocus />
+            </Field>
+            <ErrorMsg>{err}</ErrorMsg>
+            <Button full type="submit" disabled={busy}>{busy ? 'Enviando…' : 'Enviar código'}</Button>
+            <button type="button" onClick={() => { setReset(null); setErr(null) }} className="w-full py-2 text-sm font-semibold text-ink-soft">Volver a iniciar sesión</button>
+          </form>
+        ) : (
+          <form onSubmit={finishReset} className="col-narrow flex-1 space-y-4 overflow-y-auto px-5 py-6 lg:py-12">
+            <p className="text-sm leading-relaxed">
+              Si hay una cuenta con <b className="break-all">{f.email.trim().toLowerCase()}</b>, te hemos enviado un código de 6 cifras.
+            </p>
+            <Field label="Código" hint="Si no lo ves en unos minutos, mira en la carpeta de correo no deseado.">
+              <input
+                className={`${inputCls} tnum text-center text-2xl font-bold tracking-[0.4em]`}
+                value={code}
+                onChange={(e) => { setCode(e.target.value.replace(/\D/g, '').slice(0, 6)); setErr(null) }}
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                placeholder="000000"
+                autoFocus
+              />
+            </Field>
+            <Field label="Contraseña nueva" hint="Mínimo 8 caracteres.">
+              <input className={inputCls} value={newPass} onChange={(e) => setNewPass(e.target.value)} type="password" autoComplete="new-password" />
+            </Field>
+            <ErrorMsg>{err}</ErrorMsg>
+            {info && <p role="status" className="rounded-xl bg-ok-50 px-3.5 py-2.5 text-[13px] font-medium text-ok">{info}</p>}
+            <Button full type="submit" disabled={busy || code.length !== 6 || newPass.length < 8}>{busy ? 'Guardando…' : 'Cambiar la contraseña'}</Button>
+            <div className="flex items-center justify-between text-sm">
+              <button type="button" onClick={() => sendReset()} className="font-semibold text-sea">Enviar otro código</button>
+              <button type="button" onClick={() => { setReset('email'); setErr(null); setInfo(null) }} className="font-semibold text-ink-soft">Cambiar el correo</button>
+            </div>
+          </form>
+        )}
+      </div>
+    )
+  }
+
   if (codeStep) {
     return (
       <div className="flex h-full flex-col bg-foam">
@@ -109,7 +189,7 @@ export function Auth() {
             <input
               className={`${inputCls} tnum text-center text-2xl font-bold tracking-[0.4em]`}
               value={code}
-              onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+              onChange={(e) => { setCode(e.target.value.replace(/\D/g, '').slice(0, 6)); setErr(null) }}
               inputMode="numeric"
               autoComplete="one-time-code"
               placeholder="000000"
@@ -164,6 +244,11 @@ export function Auth() {
           <Button full type="submit" disabled={busy}>
             {busy ? (register ? 'Creando cuenta…' : 'Entrando…') : register ? 'Crear cuenta' : 'Iniciar sesión'}
           </Button>
+          {!register && (
+            <button type="button" onClick={startReset} className="w-full py-1 text-sm font-semibold text-sea">
+              He olvidado mi contraseña
+            </button>
+          )}
         </form>
 
         <p className="mt-5 text-center text-sm text-ink-soft">

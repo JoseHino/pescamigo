@@ -46,10 +46,13 @@ npm run dev
 - Acceso con Google (`GOOGLE_ENABLED` en `src/lib/supabase.ts`): falta crear las credenciales en Google Cloud y activarlas en Supabase.
 - Cobro de la comisión con tarjeta: falta una cuenta de Stripe.
 - Avisos push con la app cerrada: hoy los avisos se ven dentro de la app.
-- Recuperar contraseña olvidada: necesita el servicio de envío de correo.
 - Dominio pescamigo.es, proveedor de mapas para producción, textos legales y empaquetado para las tiendas.
 
-## Activar la verificación del correo
+## Verificación del correo y cambio de contraseña
+
+Activos desde el 14/11/2026 con Resend (dominio pescamigo.es verificado; secreto `RESEND_API_KEY` en Supabase). Al registrarse se pide un código de 6 cifras enviado al correo; en "Iniciar sesión" hay "He olvidado mi contraseña", que manda otro código para poner una contraseña nueva. Códigos: 15 minutos, 5 intentos, un reenvío por minuto.
+
+### Cómo se configuró
 
 La app y el servidor ya están preparados. Solo falta el servicio que envía los mensajes (Resend):
 

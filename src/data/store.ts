@@ -207,6 +207,20 @@ export async function resendCode(email: string): Promise<string | null> {
   return ok ? null : fnError(data)
 }
 
+export async function requestPasswordReset(email: string): Promise<string | null> {
+  const mail = email.trim().toLowerCase()
+  if (!/^\S+@\S+\.\S+$/.test(mail)) return 'Ese correo no parece válido.'
+  const { ok, data } = await callSignup({ action: 'reset_request', email: mail })
+  return ok ? null : fnError(data)
+}
+
+export async function confirmPasswordReset(email: string, code: string, password: string): Promise<string | null> {
+  if (password.length < 8) return 'La contraseña debe tener al menos 8 caracteres.'
+  const { ok, data } = await callSignup({ action: 'reset_confirm', email: email.trim().toLowerCase(), code, password })
+  if (!ok) return fnError(data)
+  return signIn(email, password)
+}
+
 export async function signInGoogle(): Promise<string | null> {
   if (!GOOGLE_ENABLED) return 'El acceso con Google todavía no está activado.'
   const { error } = await supabase.auth.signInWithOAuth({
