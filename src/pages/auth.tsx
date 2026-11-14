@@ -60,7 +60,6 @@ export function Welcome() {
 
 export function Auth() {
   const [q] = useSearchParams()
-  const nav = useNavigate()
   const register = q.get('modo') === 'registro'
   const [f, setF] = useState({ name: '', username: '', email: '', password: '' })
   const [err, setErr] = useState<string | null>(null)
@@ -74,8 +73,8 @@ export function Auth() {
     setErr(null)
     const error = register ? await signUp(f) : await signIn(f.email, f.password)
     setBusy(false)
-    if (error) return setErr(error)
-    nav('/')
+    // Si todo va bien no hay que navegar: al iniciarse la sesión la app pasa sola a la pantalla siguiente.
+    setErr(error)
   }
   const google = async () => setErr(await signInGoogle())
 
