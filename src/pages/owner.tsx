@@ -5,7 +5,7 @@ import {
   Settings2, Wallet, X,
 } from 'lucide-react'
 import {
-  Button, Chip, Empty, ErrorMsg, Field, Header, Notice, OutingTicket, SectionTitle, StatusBadge, inputCls,
+  Button, Chip, Empty, ErrorMsg, Field, Header, Notice, OutingTicket, SectionTitle, SocialLinks, StatusBadge, inputCls,
 } from '../components/ui'
 import { NotFound } from './explore'
 import {
@@ -89,6 +89,7 @@ function RequestCard({ b }: { b: Booking }) {
   const boat = o ? s.boats.find((x) => x.id === o.boatId) : undefined
   if (!o || !boat) return null
   const left = seatsLeft(s, o)
+  const fisherLinks = s.users.find((u) => u.id === b.fisherId)?.links ?? []
   return (
     <article className="min-w-0 space-y-3 rounded-2xl border border-line bg-white p-4">
       <div className="flex items-start justify-between gap-3">
@@ -100,6 +101,7 @@ function RequestCard({ b }: { b: Booking }) {
         </div>
         <span className="tnum shrink-0 text-[15px] font-bold">{euro(b.amountTotal)}</span>
       </div>
+      <SocialLinks links={fisherLinks} />
       <Link to={`/salida-editar/${o.id}`} className="block rounded-xl bg-foam px-3 py-2 text-[13px]">
         <span className="font-semibold">{dayLabel(o.date)}, {o.start} – {o.end}</span>
         <span className="block truncate text-ink-soft">{boat.name} · {portById(o.portId).name}</span>
@@ -480,7 +482,7 @@ export function Publish() {
     start: '07:00',
     end: '13:00',
     seats: Math.min(2, initial?.capacity ?? 2),
-    type: 'Fondo',
+    type: 'Pesca a fondo',
     costShare: '20',
     notes: '',
   })

@@ -78,10 +78,21 @@ export function MapPage() {
 
 export function OutingsPage() {
   const s = useAppState()
-  // El día elegido va en la dirección: al volver de una salida se recupera el que se estaba mirando.
+  // Filtros y día elegido van en la dirección: al volver de una salida se recupera lo que se estaba mirando.
   const [q, setQ] = useSearchParams()
-  const [port, setPort] = useState<string | null>(null)
-  const [type, setType] = useState<string | null>(null)
+  const port = q.get('puerto')
+  const type = q.get('tipo')
+  const set = (patch: Record<string, string | null>) => {
+    const next = new URLSearchParams(q)
+    for (const [k, v] of Object.entries(patch)) {
+      if (v) next.set(k, v)
+      else next.delete(k)
+    }
+    setQ(next, { replace: true })
+  }
+  // Al cambiar un filtro se salta al primer día que tenga salidas de ese filtro.
+  const setPort = (v: string | null) => set({ puerto: v, dia: null })
+  const setType = (v: string | null) => set({ tipo: v, dia: null })
   const list = upcomingOutings(s).filter((o) => {
     return (!port || o.portId === port) && (!type || o.type === type)
   })
@@ -103,27 +114,21 @@ export function OutingsPage() {
           ))}
         </div>
       </div>
-      {list.length === 0 ? (
-        <div className="flex-1 overflow-y-auto p-4">
-          <Empty icon={<CalendarX size={24} />} title="Ninguna salida con esos filtros" text="Quita algún filtro o activa los avisos para enterarte cuando se publique una." />
-        </div>
-      ) : (
-        <OutingsCalendar list={list} day={q.get('dia')} onDay={(d) => setQ({ dia: d }, { replace: true })} />
-      )}
+      <OutingsCalendar list={list} filtered={!!(port || type)} day={q.get('dia')} onDay={(d) => set({ dia: d })} />
     </div>
   )
 }
 
 /** Vista de calendario de las salidas publicadas: el mes con los días que tienen salida y, debajo, las del día elegido. */
-function OutingsCalendar({ list, day, onDay }: { list: Outing[]; day: string | null; onDay: (d: string) => void }) {
+function OutingsCalendar({ list, filtered, day, onDay }: { list: Outing[]; filtered: boolean; day: string | null; onDay: (d: string) => void }) {
   const s = useAppState()
   const now = new Date()
   const todayIso = isoDate(now)
   const byDay = new Map<string, Outing[]>()
   for (const o of list) byDay.set(o.date, [...(byDay.get(o.date) ?? []), o])
 
-  // Día elegido: el de la dirección o, si no hay, el primero con salida.
-  const sel = day && /^\d{4}-\d{2}-\d{2}$/.test(day) && day >= todayIso ? day : list[0].date
+  // Día elegido: el de la dirección o, si no hay, el primero con salida (u hoy si no hay ninguna).
+  const sel = day && /^\d{4}-\d{2}-\d{2}$/.test(day) && day >= todayIso ? day : (list[0]?.date ?? todayIso)
   const y = Number(sel.slice(0, 4))
   const m = Number(sel.slice(5, 7)) - 1
   const monthsAhead = (y - now.getFullYear()) * 12 + (m - now.getMonth())
@@ -210,7 +215,17 @@ function OutingsCalendar({ list, day, onDay }: { list: Outing[]; day: string | n
             </div>
           ) : (
             <div className="rounded-2xl border border-dashed border-line p-4 text-sm text-ink-soft">
-              <p>Ese día no hay salidas publicadas.</p>
+              {list.length === 0 ? (
+                <p className="flex items-start gap-2">
+                  <CalendarX size={18} className="mt-px shrink-0 text-sea" />
+                  <span>
+                    {filtered ? 'No hay salidas publicadas con estos filtros. Prueba con otro tipo de pesca o puerto' : 'Todavía no hay salidas publicadas'}
+                    , o activa en tu perfil los avisos de salidas nuevas.
+                  </span>
+                </p>
+              ) : (
+                <p>Ese día no hay salidas publicadas.</p>
+              )}
               {next && (
                 <button type="button" onClick={() => onDay(next.date)} className="mt-2 flex items-center gap-1 font-semibold text-sea">
                   Ver la siguiente: {shortDate(next.date)} <ChevronRight size={15} />

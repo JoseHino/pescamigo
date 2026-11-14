@@ -1,10 +1,10 @@
 import type { ButtonHTMLAttributes, ReactNode } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { ArrowLeft, ArrowRight, Banknote, Bell, MapPin, Repeat, Star, Users } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Banknote, Bell, ExternalLink, MapPin, Repeat, Star, Users } from 'lucide-react'
 import type { BookingStatus, Outing } from '../types'
 import { boatRating, seatsLeft, useAppState } from '../data/store'
 import { portById } from '../data/seed'
-import { STATUS, dayLabel, duration, euro } from '../lib/format'
+import { STATUS, dayLabel, duration, euro, linkLabel } from '../lib/format'
 
 export const inputCls =
   'w-full min-w-0 rounded-xl border border-line bg-white px-3.5 py-3 text-[15px] text-ink placeholder:text-ink-soft/60 focus:border-sea focus:outline-none focus:ring-2 focus:ring-sea/20 disabled:bg-foam disabled:text-ink-soft'
@@ -84,6 +84,27 @@ export function Rating({ boatId }: { boatId: string }) {
       <span className="tnum">{r.avg.toFixed(1).replace('.', ',')}</span>
       <span className="font-normal text-ink-soft">({r.count})</span>
     </span>
+  )
+}
+
+/** Enlaces del perfil de alguien (Instagram, TikTok…) como pastillas que abren en otra pestaña. */
+export function SocialLinks({ links }: { links: string[] }) {
+  if (!links.length) return null
+  return (
+    <div className="flex min-w-0 flex-wrap gap-1.5">
+      {links.map((l) => (
+        <a
+          key={l}
+          href={l}
+          target="_blank"
+          rel="noopener noreferrer nofollow"
+          className="inline-flex min-w-0 max-w-full items-center gap-1 rounded-full border border-line bg-white px-2.5 py-1 text-xs font-semibold text-sea-dark hover:bg-foam"
+        >
+          <span className="truncate">{linkLabel(l)}</span>
+          <ExternalLink size={12} className="shrink-0" />
+        </a>
+      ))}
+    </div>
   )
 }
 

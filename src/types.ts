@@ -6,6 +6,8 @@ export interface PublicUser {
   username: string
   name: string
   role: Role | null
+  /** Enlaces públicos del perfil (redes sociales), siempre https. */
+  links: string[]
 }
 
 export interface User extends PublicUser {

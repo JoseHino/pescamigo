@@ -1,6 +1,49 @@
 import type { BookingStatus } from '../types'
 
-export const FISHING_TYPES = ['Fondo', 'Curricán', 'Jigging', 'Spinning', 'Calamar']
+export const FISHING_TYPES = ['Pesca al vivo', 'Pesca a fondo', 'Curricán', 'Jigging', 'Egging / calamares']
+
+/* ---------- enlaces del perfil (Instagram, TikTok…) ---------- */
+
+export const MAX_LINKS = 5
+
+/** Completa lo que escribe la gente ("instagram.com/pepe", "http://…") y devuelve un enlace https válido o null. */
+export function normalizeLink(raw: string): string | null {
+  let v = raw.trim()
+  if (!v) return null
+  if (/^http:\/\//i.test(v)) v = 'https://' + v.slice(7)
+  if (!/^https:\/\//i.test(v)) v = 'https://' + v.replace(/^\/+/, '')
+  try {
+    const u = new URL(v)
+    if (!u.hostname.includes('.') || /[\s<>"'`\\]/.test(u.href) || u.href.length > 200) return null
+    return u.href
+  } catch {
+    return null
+  }
+}
+
+const NETWORKS: [RegExp, string][] = [
+  [/(^|\.)instagram\.com$/, 'Instagram'],
+  [/(^|\.)tiktok\.com$/, 'TikTok'],
+  [/(^|\.)(youtube\.com|youtu\.be)$/, 'YouTube'],
+  [/(^|\.)facebook\.com$/, 'Facebook'],
+  [/(^|\.)(x\.com|twitter\.com)$/, 'X'],
+]
+
+/** "Instagram · @pepe" para los enlaces de redes conocidas; si no, el dominio. */
+export function linkLabel(url: string) {
+  try {
+    const u = new URL(url)
+    const host = u.hostname.replace(/^(www|m)\./, '')
+    const net = NETWORKS.find(([re]) => re.test(host))?.[1]
+    if (!net) return host
+    const first = decodeURIComponent(u.pathname.split('/').filter(Boolean)[0] ?? '')
+    const generic = ['p', 'reel', 'reels', 'video', 'watch', 'channel', 'user', 'c', 'profile.php', 'share', 'shorts']
+    if (!first || generic.includes(first.toLowerCase())) return net
+    return `${net} · ${first.startsWith('@') ? first : '@' + first}`
+  } catch {
+    return url
+  }
+}
 
 /** Días de la semana en orden español (lunes primero). v = número de JavaScript/PostgreSQL (0 = domingo). */
 export const WEEKDAYS = [

@@ -1,10 +1,10 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Anchor, Bell, ChevronRight, Fish, LayoutDashboard, LogOut, Smartphone } from 'lucide-react'
-import { Button, Chip, Empty, ErrorMsg, Header } from '../components/ui'
-import { markNoticesRead, myBoats, setNotifyEmail, signOut, updatePrefs, useAppState, useMe } from '../data/store'
+import { Anchor, Bell, ChevronRight, ExternalLink, Fish, LayoutDashboard, LogOut, Smartphone, X } from 'lucide-react'
+import { Button, Chip, Empty, ErrorMsg, Header, inputCls } from '../components/ui'
+import { markNoticesRead, myBoats, saveLinks, setNotifyEmail, signOut, updatePrefs, useAppState, useMe } from '../data/store'
 import { PORTS } from '../data/seed'
-import { FISHING_TYPES, ago } from '../lib/format'
+import { FISHING_TYPES, MAX_LINKS, ago, linkLabel, normalizeLink } from '../lib/format'
 import { disablePush, enablePush, pushState, type PushState } from '../lib/push'
 
 export function Alerts() {
@@ -94,6 +94,63 @@ function DevicePush() {
   )
 }
 
+/** Enlaces del pescador a sus redes: los ven los patrones junto a su nombre. */
+function LinksEditor({ links }: { links: string[] }) {
+  const [value, setValue] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState<string | null>(null)
+  const save = async (next: string[]) => {
+    setBusy(true)
+    setErr(null)
+    const e = await saveLinks(next)
+    setBusy(false)
+    if (e) setErr(e)
+    return !e
+  }
+  const add = async (e: FormEvent) => {
+    e.preventDefault()
+    if (busy) return
+    const url = normalizeLink(value)
+    if (!url) return setErr('Ese enlace no parece válido. Cópialo de tu perfil, por ejemplo instagram.com/tu_usuario.')
+    if (links.includes(url)) return setErr('Ya tienes ese enlace.')
+    if (await save([...links, url])) setValue('')
+  }
+  return (
+    <section className="space-y-3 rounded-2xl border border-line bg-white p-4">
+      <div>
+        <h2 className="text-sm font-bold">Tus redes</h2>
+        <p className="text-xs text-ink-soft">Enlaces a tu Instagram, TikTok o YouTube. Son públicos: los patrones los verán junto a tu nombre cuando pidas plaza.</p>
+      </div>
+      {links.length > 0 && (
+        <ul className="space-y-2">
+          {links.map((l) => (
+            <li key={l} className="flex items-center gap-2 rounded-xl border border-line px-3 py-2">
+              <a href={l} target="_blank" rel="noopener noreferrer nofollow" className="flex min-w-0 flex-1 items-center gap-1.5 text-sm font-semibold text-sea-dark">
+                <span className="truncate">{linkLabel(l)}</span>
+                <ExternalLink size={13} className="shrink-0" />
+              </a>
+              <button type="button" disabled={busy} onClick={() => save(links.filter((x) => x !== l))} aria-label={`Quitar ${linkLabel(l)}`}
+                className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-ink-soft hover:bg-foam disabled:opacity-50">
+                <X size={16} />
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      {links.length < MAX_LINKS ? (
+        <form onSubmit={add} className="flex gap-2">
+          <input className={`${inputCls} py-2.5 text-sm`} type="text" inputMode="url" autoCapitalize="none" autoCorrect="off" spellCheck={false}
+            value={value} onChange={(e) => setValue(e.target.value)} placeholder="instagram.com/tu_usuario" aria-label="Enlace a tu red social" />
+          <Button type="submit" variant="outline" disabled={busy || !value.trim()} className="shrink-0">Añadir</Button>
+        </form>
+      ) : (
+        <p className="text-xs text-ink-soft">Has llegado al máximo de {MAX_LINKS} enlaces.</p>
+      )}
+      <ErrorMsg>{err}</ErrorMsg>
+    </section>
+  )
+}
+
 export function Profile() {
   const nav = useNavigate()
   const s = useAppState()
@@ -122,7 +179,11 @@ export function Profile() {
             </p>
           </div>
         </div>
-        <p className="-mt-2 px-1 text-xs text-ink-soft">Los demás solo ven tu nombre. Tu correo no se muestra a nadie.</p>
+        <p className="-mt-2 px-1 text-xs text-ink-soft">
+          {me.links.length ? 'Los demás ven tu nombre y tus redes.' : 'Los demás solo ven tu nombre.'} Tu correo no se muestra a nadie.
+        </p>
+
+        {me.role === 'fisher' && <LinksEditor links={me.links} />}
 
         {me.role === 'owner' && (
           <Link to="/panel" className="flex items-center gap-3 rounded-2xl border border-line bg-white p-4">

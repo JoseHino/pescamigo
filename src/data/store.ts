@@ -88,7 +88,7 @@ export function isUnread(c: Conversation, userId: string) {
 /* ---------- carga de datos ---------- */
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
-const toUser = (r: any): PublicUser => ({ id: r.id, username: r.username, name: r.full_name, role: r.role })
+const toUser = (r: any): PublicUser => ({ id: r.id, username: r.username, name: r.full_name, role: r.role, links: r.links ?? [] })
 const toBoat = (r: any): Boat => ({
   id: r.id, ownerId: r.owner_id, name: r.name, model: r.model, lengthM: Number(r.length_m), capacity: r.capacity,
   portId: r.port_id, description: r.description, photos: r.photos ?? [],
@@ -131,7 +131,7 @@ export function refresh(): Promise<void> {
   if (loading) return loading
   loading = (async () => {
     const [users, boats, outings, bookings, reviews, notices, settings, rules, blocked, convs] = await Promise.all([
-      supabase.from('profiles').select('id,username,full_name,role'),
+      supabase.from('profiles').select('id,username,full_name,role,links'),
       supabase.from('boats').select('*'),
       supabase.from('outings').select('*').gte('day', addDays(-120)),
       supabase.from('bookings').select('*'),
@@ -321,6 +321,16 @@ export function updatePrefs(prefs: User['prefs']) {
     .then(({ error }) => {
       if (error) commit({ me })
     })
+}
+
+/** Guarda los enlaces del perfil. Devuelve un mensaje de error o null. */
+export async function saveLinks(links: string[]): Promise<string | null> {
+  const me = state.me
+  if (!me) return GENERIC
+  const { error } = await supabase.from('profiles').update({ links }).eq('id', me.id)
+  if (error) return 'No se ha podido guardar el enlace. Revisa que esté bien escrito.'
+  commit({ me: { ...me, links }, users: state.users.map((u) => (u.id === me.id ? { ...u, links } : u)) })
+  return null
 }
 
 export function setNotifyEmail(on: boolean) {
