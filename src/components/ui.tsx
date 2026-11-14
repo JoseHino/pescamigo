@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ButtonHTMLAttributes, type ReactNode } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import {
-  ArrowLeft, ArrowRight, Award, Banknote, Bell, ChevronLeft, ChevronRight, Crown, ExternalLink, MapPin, Repeat, Star, Users, X,
+  ArrowLeft, ArrowRight, Award, Banknote, Bell, ChevronLeft, ChevronRight, Crown, MapPin, Repeat, Star, Users, X,
 } from 'lucide-react'
 import type { BookingStatus, Outing } from '../types'
 import { boatRating, seatsLeft, useAppState } from '../data/store'
@@ -119,10 +119,9 @@ export function SocialLinks({ links }: { links: string[] }) {
           href={l}
           target="_blank"
           rel="noopener noreferrer nofollow"
-          className="inline-flex min-w-0 max-w-full items-center gap-1 rounded-full border border-line bg-white px-2.5 py-1 text-xs font-semibold text-sea-dark hover:bg-foam"
+          className="inline-flex min-w-0 max-w-full items-center rounded-full border border-line bg-white px-2.5 py-1 text-xs font-semibold text-sea-dark hover:bg-foam"
         >
           <span className="truncate">{linkLabel(l)}</span>
-          <ExternalLink size={12} className="shrink-0" />
         </a>
       ))}
     </div>
@@ -159,9 +158,8 @@ export function LinksInput({ links, onChange, placeholder = 'instagram.com/tu_us
         <ul className="space-y-2">
           {links.map((l) => (
             <li key={l} className="flex items-center gap-2 rounded-xl border border-line bg-white px-3 py-2">
-              <a href={l} target="_blank" rel="noopener noreferrer nofollow" className="flex min-w-0 flex-1 items-center gap-1.5 text-sm font-semibold text-sea-dark">
+              <a href={l} target="_blank" rel="noopener noreferrer nofollow" className="flex min-w-0 flex-1 items-center text-sm font-semibold text-sea-dark">
                 <span className="truncate">{linkLabel(l)}</span>
-                <ExternalLink size={13} className="shrink-0" />
               </a>
               <button type="button" disabled={busy} onClick={() => apply(links.filter((x) => x !== l))} aria-label={`Quitar ${linkLabel(l)}`}
                 className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-ink-soft hover:bg-foam disabled:opacity-50">
