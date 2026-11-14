@@ -158,6 +158,7 @@ export function refresh(): Promise<void> {
       reviews: (reviews.data ?? []).map((r: any): Review => ({
         id: r.id, boatId: r.boat_id, bookingId: r.booking_id, rating: r.rating, comment: r.comment, photo: r.photo,
         date: String(r.created_at).slice(0, 10),
+        outingDay: r.outing_day ?? null,
         authorName: shortName(us.find((u) => u.id === r.author_id)?.name ?? 'Pescador'),
       })),
       notices: (notices.data ?? []).map(toNotice),

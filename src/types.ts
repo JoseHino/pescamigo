@@ -78,6 +78,8 @@ export interface Review {
   comment: string
   photo: string | null
   date: string
+  /** Día de la salida valorada: prueba de que el autor salió en el barco. */
+  outingDay: string | null
 }
 
 export interface Notice {

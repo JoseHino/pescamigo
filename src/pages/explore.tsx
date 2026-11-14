@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { Banknote, CalendarX, ChevronRight, Clock, MapPin, MessageCircle, Repeat, Ruler, ShieldCheck, Users, X } from 'lucide-react'
+import { BadgeCheck, Banknote, CalendarX, ChevronRight, Clock, MapPin, MessageCircle, Repeat, Ruler, ShieldCheck, Users, X } from 'lucide-react'
 import MapView from '../components/MapView'
 import { Button, Chip, Empty, Header, OutingTicket, Rating, Stars, StatusBadge } from '../components/ui'
 import { boatRating, bookingWindow, conversationFor, myActiveBooking, seatsLeft, upcomingOutings, useAppState, useMe } from '../data/store'
@@ -304,17 +304,21 @@ export function BoatProfile() {
           </section>
 
           <section>
-            <h3 className="mb-2.5 text-base font-bold">Comentarios y valoraciones</h3>
+            <h3 className="text-base font-bold">Comentarios y valoraciones</h3>
+            <p className="mb-3 mt-0.5 text-[13px] text-ink-soft">Solo pueden opinar quienes han salido a pescar en este barco con una reserva confirmada.</p>
             {reviews.length ? (
               <ul className="space-y-3">
                 {reviews.map((x) => (
                   <li key={x.id} className="rounded-2xl border border-line bg-white p-4">
                     <div className="flex items-center justify-between gap-3">
                       <span className="truncate text-sm font-bold">{x.authorName}</span>
-                      <span className="text-xs text-ink-soft">{shortDate(x.date)}</span>
+                      <span className="shrink-0"><Stars value={x.rating} /></span>
                     </div>
-                    <Stars value={x.rating} />
-                    <p className="wrap-anywhere mt-1.5 text-sm leading-relaxed">{x.comment}</p>
+                    <p className="mt-1 flex items-center gap-1.5 text-xs font-semibold text-sea-dark">
+                      <BadgeCheck size={14} className="shrink-0" />
+                      {x.outingDay ? `Salida verificada · ${shortDate(x.outingDay)}` : 'Salida verificada'}
+                    </p>
+                    <p className="wrap-anywhere mt-2 text-sm leading-relaxed">{x.comment}</p>
                     {x.photo && <img src={x.photo} alt="Foto de la salida" className="mt-3 h-36 w-full rounded-xl object-cover" />}
                   </li>
                 ))}
