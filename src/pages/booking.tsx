@@ -76,7 +76,7 @@ export function Checkout() {
 
           <div className="rounded-2xl border border-line bg-white p-4 text-sm">
             <div className="flex justify-between">
-              <span>Gestión de Enrola ({seats} × {euro(SERVICE_FEE)})</span>
+              <span>Gestión de Pescamigo ({seats} × {euro(SERVICE_FEE)})</span>
               <b className="tnum">{euro(SERVICE_FEE * seats)}</b>
             </div>
             <p className="mt-0.5 text-xs text-ink-soft">Se cobra ahora con tarjeta.</p>

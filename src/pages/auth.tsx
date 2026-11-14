@@ -43,7 +43,7 @@ export function Welcome() {
             <span className="grid h-10 w-10 place-items-center rounded-xl bg-white text-ink">
               <Sailboat size={22} />
             </span>
-            <span className="text-xl font-extrabold tracking-tight">Enrola</span>
+            <span className="text-xl font-extrabold tracking-tight">Pescamigo</span>
           </div>
           <h1 className="text-[34px] font-extrabold leading-[1.08] tracking-tight">
             Hay un barco que sale a pescar <span className="text-buoy">y le sobra sitio.</span>
@@ -144,7 +144,7 @@ export function RoleSetup() {
   ]
   return (
     <div className="flex h-full flex-col bg-foam px-5 py-8">
-      <h1 className="text-2xl font-extrabold tracking-tight">¿Cómo vas a usar Enrola?</h1>
+      <h1 className="text-2xl font-extrabold tracking-tight">¿Cómo vas a usar Pescamigo?</h1>
       <p className="mt-2 text-sm text-ink-soft">Elige uno. Define lo que ves en la app.</p>
       <div className="mt-6 flex-1 space-y-3">
         {options.map((o) => (

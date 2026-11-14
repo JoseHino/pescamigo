@@ -47,7 +47,7 @@ export function seedState(): State {
   const pass = demoHash('demo1234')
   const user = (id: string, name: string, username: string, role: 'owner' | 'fisher') => ({
     id,
-    email: `${username}@enrola.demo`,
+    email: `${username}@pescamigo.demo`,
     username,
     name,
     passHash: pass,

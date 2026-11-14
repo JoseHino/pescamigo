@@ -3,7 +3,7 @@ import type { Boat, Booking, Notice, Outing, Role, State, User } from '../types'
 import { seedState, portById } from './seed'
 import { SERVICE_FEE, dayLabel, demoHash, isoDate, toDate, uid } from '../lib/format'
 
-const KEY = 'enrola-demo-v1'
+const KEY = 'pescamigo-demo-v1'
 
 function load(): State {
   try {
@@ -101,7 +101,7 @@ export function signInGoogle() {
   let u = state.users.find((x) => x.provider === 'google')
   if (!u) {
     u = {
-      id: uid(), email: 'invitado.google@enrola.demo', username: 'invitado.google', name: 'Invitado Google',
+      id: uid(), email: 'invitado.google@pescamigo.demo', username: 'invitado.google', name: 'Invitado Google',
       passHash: null, provider: 'google', role: null, createdAt: new Date().toISOString(), prefs: emptyPrefs(),
     }
     commit({ ...state, users: [...state.users, u], sessionUserId: u.id })

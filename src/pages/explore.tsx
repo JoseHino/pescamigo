@@ -170,7 +170,7 @@ export function OutingDetail() {
             </div>
             <div className="mt-2.5 flex items-center gap-3">
               <CreditCard size={18} className="text-sea" />
-              <span className="flex-1 text-sm">Gestión de Enrola, con tarjeta al reservar</span>
+              <span className="flex-1 text-sm">Gestión de Pescamigo, con tarjeta al reservar</span>
               <b className="tnum">{euro(SERVICE_FEE)}</b>
             </div>
           </div>
@@ -248,7 +248,7 @@ export function BoatProfile() {
             <p className="mb-2 flex items-center gap-2 font-semibold"><ShieldCheck size={16} className="text-sea" /> Declarado por el propietario</p>
             <p className={boat.insuranceDeclared ? '' : 'text-ink-soft'}>{boat.insuranceDeclared ? 'Seguro de la embarcación en vigor' : 'No ha indicado si tiene seguro en vigor'}</p>
             <p className={boat.licenseDeclared ? '' : 'text-ink-soft'}>{boat.licenseDeclared ? 'Titulación náutica para este barco' : 'No ha indicado su titulación náutica'}</p>
-            <p className="mt-2 text-xs text-ink-soft">Enrola todavía no comprueba esta documentación.</p>
+            <p className="mt-2 text-xs text-ink-soft">Pescamigo todavía no comprueba esta documentación.</p>
           </div>
 
           <section>

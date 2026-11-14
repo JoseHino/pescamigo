@@ -1,4 +1,4 @@
--- Enrola · esquema para el backend real (Supabase / PostgreSQL)
+-- Pescamigo · esquema para el backend real (Supabase / PostgreSQL)
 -- BORRADOR: todavía no se ha ejecutado contra ningún proyecto.
 -- Las contraseñas NO se guardan aquí: las gestiona Supabase Auth (auth.users),
 -- tanto para correo+contraseña como para el acceso con Google.

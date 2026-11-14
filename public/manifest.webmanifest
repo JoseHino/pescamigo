@@ -1,6 +1,6 @@
 {
-  "name": "Enrola",
-  "short_name": "Enrola",
+  "name": "Pescamigo",
+  "short_name": "Pescamigo",
   "description": "Salidas de pesca compartidas entre propietarios de barco y pescadores",
   "start_url": "./",
   "display": "standalone",

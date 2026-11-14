@@ -1,4 +1,4 @@
-# Enrola (nombre provisional)
+# Pescamigo
 
 App móvil que conecta propietarios de barco que salen a pescar con pescadores sin barco.
 
