@@ -226,10 +226,10 @@ export function Auth() {
         <form onSubmit={submit} className="space-y-4">
           {register && (
             <>
-              <Field label="Nombre y apellido">
-                <input className={inputCls} value={f.name} onChange={on('name')} autoComplete="name" />
+              <Field label="Tu nombre" hint="Es lo que verán los demás en salidas, chats y valoraciones. Tu correo no se muestra a nadie.">
+                <input className={inputCls} maxLength={80} value={f.name} onChange={on('name')} autoComplete="name" />
               </Field>
-              <Field label="Nombre de usuario" hint="Es el que verán los demás.">
+              <Field label="Nombre de usuario" hint="Entre 3 y 20 letras, números, puntos o guiones.">
                 <input className={inputCls} value={f.username} onChange={on('username')} autoCapitalize="none" autoComplete="username" />
               </Field>
             </>

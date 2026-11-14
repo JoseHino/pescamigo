@@ -10,6 +10,7 @@ export interface PublicUser {
 
 export interface User extends PublicUser {
   email: string
+  notifyEmail: boolean
   prefs: { ports: string[]; types: string[]; push: boolean }
 }
 
@@ -27,30 +28,45 @@ export interface Boat {
   photos: string[]
   insuranceDeclared: boolean
   licenseDeclared: boolean
+  bookMaxDays: number // se puede reservar desde X días antes
+  bookMinHours: number // las reservas se cierran X horas antes
 }
 
 export interface Outing {
   id: string
   boatId: string
+  portId: string
+  ruleId: string | null // salida generada por una salida habitual
   date: string // YYYY-MM-DD
   start: string // HH:mm
   end: string
   seats: number
-  seatsTaken: number
+  seatsTaken: number // plazas aceptadas o confirmadas
   type: string
-  costShare: number // € por persona, en efectivo al propietario
+  costShare: number // € por persona
   notes: string
   status: 'open' | 'cancelled'
 }
+
+export type BookingStatus = 'pending' | 'accepted' | 'confirmed' | 'rejected' | 'cancelled'
 
 export interface Booking {
   id: string
   outingId: string
   fisherId: string
   seats: number
-  fee: number
-  status: 'confirmed' | 'cancelled'
+  status: BookingStatus
+  message: string
+  amountTotal: number
+  commissionPct: number
+  commissionAmount: number
+  ownerAmount: number
+  paymentMethod: 'cash' | 'card'
+  paymentStatus: 'none' | 'authorized' | 'paid' | 'refunded' | 'failed'
+  reason: string
+  cancelledBy: 'fisher' | 'owner' | 'system' | null
   createdAt: string
+  updatedAt: string
 }
 
 export interface Review {
@@ -74,13 +90,57 @@ export interface Notice {
   read: boolean
 }
 
+export interface Rule {
+  id: string
+  boatId: string
+  weekdays: number[] // 0 = domingo … 6 = sábado
+  start: string
+  end: string
+  seats: number
+  type: string
+  costShare: number
+  notes: string
+  portId: string
+  validUntil: string | null
+  active: boolean
+}
+
+export interface BlockedDay { boatId: string; day: string }
+
+export interface Conversation {
+  id: string
+  bookingId: string
+  ownerId: string
+  fisherId: string
+  lastMessage: string
+  lastMessageAt: string
+  ownerReadAt: string
+  fisherReadAt: string
+}
+
+export interface Message {
+  id: string
+  conversationId: string
+  senderId: string | null
+  isSystem: boolean
+  body: string
+  createdAt: string
+}
+
+export interface Settings { commissionPct: number; paymentsEnabled: boolean }
+
 export interface State {
   ready: boolean // false mientras se comprueba la sesión
   me: User | null
+  settings: Settings
   users: PublicUser[]
   boats: Boat[]
   outings: Outing[]
   bookings: Booking[]
   reviews: Review[]
   notices: Notice[]
+  rules: Rule[]
+  blocked: BlockedDay[]
+  conversations: Conversation[]
+  messages: Record<string, Message[]> // por conversación, se cargan al abrir el chat
 }

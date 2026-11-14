@@ -13,6 +13,7 @@
   --color-line: #DCE5EE;
   --color-buoy: #F26B21;
   --color-buoy-50: #FEF0E7;
+  --color-buoy-dark: #A9440E;
   --color-ok: #16855B;
   --color-ok-50: #E6F5EE;
 }
@@ -26,6 +27,8 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 .tnum { font-variant-numeric: tabular-nums; }
+/* textos que escribe la gente (notas, mensajes, motivos): nunca desbordan el ancho */
+.wrap-anywhere { overflow-wrap: anywhere; word-break: break-word; }
 :focus-visible { outline: 2px solid var(--color-sea); outline-offset: 2px; }
 .leaflet-container { font-family: var(--font-sans); background: #CFE3F3; }
 .pin { background: none; border: none; }

@@ -1,11 +1,17 @@
 import { useSyncExternalStore } from 'react'
 import type { Session } from '@supabase/supabase-js'
-import type { Boat, Booking, Notice, Outing, PublicUser, Review, Role, State, User } from '../types'
+import type {
+  Boat, Booking, Conversation, Message, Notice, Outing, PublicUser, Review, Role, Rule, State, User,
+} from '../types'
 import { GOOGLE_ENABLED, SUPABASE_KEY, SUPABASE_URL, supabase } from '../lib/supabase'
-import { addDays, isoDate, toDate } from '../lib/format'
+import { ACTIVE, addDays, isoDate, toDate } from '../lib/format'
+import { disablePush, syncPush } from '../lib/push'
 
-const EMPTY = { users: [], boats: [], outings: [], bookings: [], reviews: [], notices: [] }
-let state: State = { ready: false, me: null, ...EMPTY }
+const EMPTY = {
+  users: [], boats: [], outings: [], bookings: [], reviews: [], notices: [],
+  rules: [], blocked: [], conversations: [], messages: {},
+}
+let state: State = { ready: false, me: null, settings: { commissionPct: 20, paymentsEnabled: false }, ...EMPTY }
 const listeners = new Set<() => void>()
 
 function commit(patch: Partial<State>) {
@@ -28,6 +34,7 @@ const GENERIC = 'No se ha podido completar. Comprueba la conexión e inténtalo 
 // Los mensajes que lanza la base de datos a propósito (código P0001) ya vienen redactados para el usuario.
 function dbError(e: { code?: string; message?: string } | null): string | null {
   if (!e) return null
+  if (e.code === '23505') return 'Ya existe una solicitud igual. Revisa tus reservas.'
   return e.code === 'P0001' && e.message ? e.message : GENERIC
 }
 
@@ -35,6 +42,9 @@ function dbError(e: { code?: string; message?: string } | null): string | null {
 
 export function seatsLeft(_s: State, o: Outing) {
   return Math.max(0, o.seats - o.seatsTaken)
+}
+export function startsAt(o: Outing) {
+  return toDate(o.date, o.start).getTime()
 }
 export function isPast(o: Outing) {
   return toDate(o.date, o.end).getTime() < Date.now()
@@ -49,8 +59,30 @@ export function boatRating(s: State, boatId: string) {
   if (!rs.length) return { avg: 0, count: 0 }
   return { avg: rs.reduce((n, r) => n + r.rating, 0) / rs.length, count: rs.length }
 }
-export function myBoat(s: State, userId: string) {
-  return s.boats.find((b) => b.ownerId === userId) ?? null
+export function myBoats(s: State, userId: string) {
+  return s.boats.filter((b) => b.ownerId === userId).sort((a, b) => a.name.localeCompare(b.name))
+}
+export function myActiveBooking(s: State, outingId: string, userId: string) {
+  return s.bookings.find((b) => b.outingId === outingId && b.fisherId === userId && ACTIVE.includes(b.status)) ?? null
+}
+/** Si ahora mismo se puede solicitar plaza en esta salida, o por qué no. */
+export function bookingWindow(boat: Boat, o: Outing): { open: boolean; reason?: string } {
+  const start = startsAt(o)
+  if (o.status !== 'open' || start < Date.now()) return { open: false, reason: 'Esta salida ya no admite reservas.' }
+  if (start > Date.now() + boat.bookMaxDays * 86400000) {
+    return { open: false, reason: `Las reservas se abren ${boat.bookMaxDays} días antes de la salida.` }
+  }
+  if (start < Date.now() + boat.bookMinHours * 3600000) {
+    return { open: false, reason: `Las reservas se cierran ${boat.bookMinHours} horas antes de salir.` }
+  }
+  return { open: true }
+}
+export function conversationFor(s: State, bookingId: string) {
+  return s.conversations.find((c) => c.bookingId === bookingId) ?? null
+}
+export function isUnread(c: Conversation, userId: string) {
+  const readAt = userId === c.ownerId ? c.ownerReadAt : c.fisherReadAt
+  return new Date(c.lastMessageAt).getTime() > new Date(readAt).getTime()
 }
 
 /* ---------- carga de datos ---------- */
@@ -61,16 +93,32 @@ const toBoat = (r: any): Boat => ({
   id: r.id, ownerId: r.owner_id, name: r.name, model: r.model, lengthM: Number(r.length_m), capacity: r.capacity,
   portId: r.port_id, description: r.description, photos: r.photos ?? [],
   insuranceDeclared: r.insurance_declared, licenseDeclared: r.license_declared,
+  bookMaxDays: r.book_max_days, bookMinHours: r.book_min_hours,
 })
+const hm = (t: string) => String(t).slice(0, 5)
 const toOuting = (r: any): Outing => ({
-  id: r.id, boatId: r.boat_id, date: r.day, start: String(r.start_time).slice(0, 5), end: String(r.end_time).slice(0, 5),
+  id: r.id, boatId: r.boat_id, portId: r.port_id, ruleId: r.rule_id, date: r.day, start: hm(r.start_time), end: hm(r.end_time),
   seats: r.seats, seatsTaken: r.seats_taken, type: r.fishing_type, costShare: Number(r.cost_share), notes: r.notes, status: r.status,
 })
 const toBooking = (r: any): Booking => ({
-  id: r.id, outingId: r.outing_id, fisherId: r.fisher_id, seats: r.seats, fee: Number(r.fee), status: r.status, createdAt: r.created_at,
+  id: r.id, outingId: r.outing_id, fisherId: r.fisher_id, seats: r.seats, status: r.status, message: r.message,
+  amountTotal: Number(r.amount_total), commissionPct: Number(r.commission_pct), commissionAmount: Number(r.commission_amount),
+  ownerAmount: Number(r.owner_amount), paymentMethod: r.payment_method, paymentStatus: r.payment_status,
+  reason: r.reason, cancelledBy: r.cancelled_by, createdAt: r.created_at, updatedAt: r.updated_at,
 })
 const toNotice = (r: any): Notice => ({
   id: r.id, userId: r.user_id, title: r.title, body: r.body, link: r.link, createdAt: r.created_at, read: r.read,
+})
+const toRule = (r: any): Rule => ({
+  id: r.id, boatId: r.boat_id, weekdays: r.weekdays, start: hm(r.start_time), end: hm(r.end_time), seats: r.seats,
+  type: r.fishing_type, costShare: Number(r.cost_share), notes: r.notes, portId: r.port_id, validUntil: r.valid_until, active: r.active,
+})
+const toConversation = (r: any): Conversation => ({
+  id: r.id, bookingId: r.booking_id, ownerId: r.owner_id, fisherId: r.fisher_id, lastMessage: r.last_message,
+  lastMessageAt: r.last_message_at, ownerReadAt: r.owner_read_at, fisherReadAt: r.fisher_read_at,
+})
+const toMessage = (r: any): Message => ({
+  id: r.id, conversationId: r.conversation_id, senderId: r.sender_id, isSystem: r.is_system, body: r.body, createdAt: r.created_at,
 })
 function shortName(name: string) {
   const [first, last] = name.trim().split(/\s+/)
@@ -82,28 +130,40 @@ export function refresh(): Promise<void> {
   if (!state.me) return Promise.resolve()
   if (loading) return loading
   loading = (async () => {
-    const [users, boats, outings, bookings, reviews, notices] = await Promise.all([
+    const [users, boats, outings, bookings, reviews, notices, settings, rules, blocked, convs] = await Promise.all([
       supabase.from('profiles').select('id,username,full_name,role'),
       supabase.from('boats').select('*'),
       supabase.from('outings').select('*').gte('day', addDays(-120)),
       supabase.from('bookings').select('*'),
       supabase.from('reviews').select('*').order('created_at', { ascending: false }),
       supabase.from('notifications').select('*').order('created_at', { ascending: false }).limit(60),
+      supabase.from('app_settings').select('commission_pct,payments_enabled').maybeSingle(),
+      supabase.from('outing_rules').select('*').eq('active', true),
+      supabase.from('boat_blocked_days').select('boat_id,day').gte('day', isoDate(new Date())),
+      supabase.from('conversations').select('*').order('last_message_at', { ascending: false }),
     ])
+    const failed = [users, boats, outings, bookings, reviews, notices, settings, rules, blocked, convs].some((r) => r.error)
     // Si alguna consulta falla (sin cobertura, por ejemplo) se conserva lo que ya había en pantalla.
-    if (users.error || boats.error || outings.error || bookings.error || reviews.error || notices.error || !state.me) return
-    const us = users.data.map(toUser)
+    if (failed || !state.me) return
+    const us = (users.data ?? []).map(toUser)
     commit({
       users: us,
-      boats: boats.data.map(toBoat),
-      outings: outings.data.map(toOuting),
-      bookings: bookings.data.map(toBooking),
-      reviews: reviews.data.map((r: any): Review => ({
+      settings: {
+        commissionPct: Number(settings.data?.commission_pct ?? 20),
+        paymentsEnabled: !!settings.data?.payments_enabled,
+      },
+      boats: (boats.data ?? []).map(toBoat),
+      outings: (outings.data ?? []).map(toOuting),
+      bookings: (bookings.data ?? []).map(toBooking),
+      reviews: (reviews.data ?? []).map((r: any): Review => ({
         id: r.id, boatId: r.boat_id, bookingId: r.booking_id, rating: r.rating, comment: r.comment, photo: r.photo,
         date: String(r.created_at).slice(0, 10),
         authorName: shortName(us.find((u) => u.id === r.author_id)?.name ?? 'Pescador'),
       })),
-      notices: notices.data.map(toNotice),
+      notices: (notices.data ?? []).map(toNotice),
+      rules: (rules.data ?? []).map(toRule),
+      blocked: (blocked.data ?? []).map((r: any) => ({ boatId: r.boat_id, day: r.day })),
+      conversations: (convs.data ?? []).map(toConversation),
     })
   })().finally(() => {
     loading = null
@@ -126,11 +186,13 @@ async function loadSession(session: Session | null) {
     me: {
       ...toUser(data),
       email: data.email,
+      notifyEmail: data.notify_email,
       prefs: { ports: data.pref_ports ?? [], types: data.pref_types ?? [], push: data.notify_new_outings },
     },
   })
   await refresh()
   commit({ ready: true })
+  void syncPush()
 }
 
 supabase.auth.onAuthStateChange((event, session) => {
@@ -231,6 +293,8 @@ export async function signInGoogle(): Promise<string | null> {
 }
 
 export async function signOut() {
+  // Este dispositivo deja de recibir avisos de la cuenta que sale.
+  await disablePush()
   await supabase.auth.signOut()
   commit({ ready: true, me: null, ...EMPTY })
 }
@@ -258,6 +322,19 @@ export function updatePrefs(prefs: User['prefs']) {
     })
 }
 
+export function setNotifyEmail(on: boolean) {
+  const me = state.me
+  if (!me) return
+  commit({ me: { ...me, notifyEmail: on } })
+  void supabase
+    .from('profiles')
+    .update({ notify_email: on })
+    .eq('id', me.id)
+    .then(({ error }) => {
+      if (error) commit({ me })
+    })
+}
+
 /* ---------- fotos ---------- */
 
 async function uploadPhoto(dataUrl: string): Promise<string> {
@@ -277,39 +354,60 @@ export function markNoticesRead(userId: string) {
   void supabase.from('notifications').update({ read: true }).eq('user_id', userId).eq('read', false).then(() => undefined)
 }
 
-/* ---------- propietario ---------- */
+/* ---------- propietario: barcos ---------- */
 
-export async function saveBoat(d: Omit<Boat, 'id' | 'ownerId'>): Promise<string | null> {
+export async function saveBoat(id: string | null, d: Omit<Boat, 'id' | 'ownerId'>): Promise<{ error?: string; id?: string }> {
   const me = state.me
-  if (!me) return GENERIC
+  if (!me) return { error: GENERIC }
   let photos: string[]
   try {
     photos = await Promise.all(d.photos.map(uploadPhoto))
   } catch {
-    return 'No se han podido subir las fotos. Inténtalo de nuevo.'
+    return { error: 'No se han podido subir las fotos. Inténtalo de nuevo.' }
   }
   const row = {
     name: d.name, model: d.model, length_m: d.lengthM, capacity: d.capacity, port_id: d.portId,
     description: d.description, photos, insurance_declared: d.insuranceDeclared, license_declared: d.licenseDeclared,
+    book_max_days: d.bookMaxDays, book_min_hours: d.bookMinHours,
   }
-  const existing = myBoat(state, me.id)
-  const { error } = existing
-    ? await supabase.from('boats').update(row).eq('id', existing.id)
-    : await supabase.from('boats').insert(row)
-  if (error) return dbError(error)
+  const res = id
+    ? await supabase.from('boats').update(row).eq('id', id).select('id').single()
+    : await supabase.from('boats').insert(row).select('id').single()
+  if (res.error) return { error: dbError(res.error) ?? GENERIC }
   await refresh()
-  return null
+  return { id: res.data.id }
 }
 
-export async function publishOuting(d: Omit<Outing, 'id' | 'boatId' | 'status' | 'seatsTaken'>): Promise<string | null> {
-  const boat = state.me ? myBoat(state, state.me.id) : null
-  if (!boat) return 'Primero da de alta tu barco.'
-  if (!d.date || d.date < isoDate(new Date())) return 'Elige una fecha de hoy en adelante.'
+/* ---------- propietario: salidas y calendario ---------- */
+
+export interface OutingInput {
+  boatId: string
+  portId: string
+  date: string
+  start: string
+  end: string
+  seats: number
+  type: string
+  costShare: number
+  notes: string
+}
+
+function checkOuting(boat: Boat | undefined, d: Omit<OutingInput, 'date' | 'boatId'>): string | null {
+  if (!boat) return 'Elige el barco.'
   if (!d.start || !d.end || d.end <= d.start) return 'La hora de vuelta debe ser posterior a la de salida.'
   if (d.seats < 1 || d.seats > boat.capacity) return `Tu barco admite entre 1 y ${boat.capacity} plazas.`
   if (Number.isNaN(d.costShare) || d.costShare < 0 || d.costShare > 500) return 'Indica el reparto de gastos por persona (entre 0 y 500 €).'
+  return null
+}
+
+export async function publishOuting(d: OutingInput): Promise<string | null> {
+  const boat = state.boats.find((b) => b.id === d.boatId && b.ownerId === state.me?.id)
+  const bad = checkOuting(boat, d)
+  if (bad) return bad
+  if (!d.date || d.date < isoDate(new Date())) return 'Elige una fecha de hoy en adelante.'
+  if (toDate(d.date, d.start).getTime() < Date.now()) return 'Esa hora de salida ya ha pasado.'
   const { error } = await supabase.from('outings').insert({
-    boat_id: boat.id, day: d.date, start_time: d.start, end_time: d.end, seats: d.seats,
+    boat_id: d.boatId, port_id: d.portId, day: d.date, start_time: d.start, end_time: d.end, seats: d.seats,
     fishing_type: d.type, cost_share: d.costShare, notes: d.notes,
   })
   if (error) return dbError(error)
@@ -317,16 +415,63 @@ export async function publishOuting(d: Omit<Outing, 'id' | 'boatId' | 'status' |
   return null
 }
 
-export async function cancelOuting(outingId: string): Promise<string | null> {
-  const { error } = await supabase.rpc('cancel_outing', { p_outing: outingId })
+export async function createRule(
+  d: Omit<OutingInput, 'date'> & { weekdays: number[]; until: string | null },
+): Promise<{ error?: string; created?: number }> {
+  const boat = state.boats.find((b) => b.id === d.boatId && b.ownerId === state.me?.id)
+  const bad = checkOuting(boat, d)
+  if (bad) return { error: bad }
+  if (!d.weekdays.length) return { error: 'Elige al menos un día de la semana.' }
+  const { data, error } = await supabase.rpc('create_rule', {
+    p_boat: d.boatId, p_weekdays: d.weekdays, p_start: d.start, p_end: d.end, p_seats: d.seats, p_type: d.type,
+    p_cost: d.costShare, p_notes: d.notes, p_port: d.portId, p_until: d.until || null,
+  })
+  if (error) return { error: dbError(error) ?? GENERIC }
+  await refresh()
+  return { created: data?.created ?? 0 }
+}
+
+export async function deleteRule(ruleId: string): Promise<{ error?: string; kept?: number }> {
+  const { data, error } = await supabase.rpc('delete_rule', { p_rule: ruleId })
+  await refresh()
+  return error ? { error: dbError(error) ?? GENERIC } : { kept: data ?? 0 }
+}
+
+export async function setDayBlocked(boatId: string, day: string, blocked: boolean): Promise<{ error?: string; cancelled?: number }> {
+  const { data, error } = await supabase.rpc('set_day_blocked', { p_boat: boatId, p_day: day, p_blocked: blocked })
+  await refresh()
+  return error ? { error: dbError(error) ?? GENERIC } : { cancelled: data ?? 0 }
+}
+
+export async function updateOuting(
+  id: string,
+  d: { start: string; end: string; seats: number; costShare: number; notes: string },
+): Promise<string | null> {
+  if (!d.start || !d.end || d.end <= d.start) return 'La hora de vuelta debe ser posterior a la de salida.'
+  if (Number.isNaN(d.costShare)) return 'Indica el reparto de gastos por persona.'
+  const { error } = await supabase.rpc('update_outing', {
+    p_outing: id, p_start: d.start, p_end: d.end, p_seats: d.seats, p_cost: d.costShare, p_notes: d.notes,
+  })
+  await refresh()
+  return dbError(error)
+}
+
+export async function cancelOuting(outingId: string, reason = ''): Promise<string | null> {
+  const { error } = await supabase.rpc('cancel_outing', { p_outing: outingId, p_reason: reason })
+  await refresh()
+  return dbError(error)
+}
+
+export async function respondBooking(bookingId: string, accept: boolean, reason = ''): Promise<string | null> {
+  const { error } = await supabase.rpc('respond_booking', { p_booking: bookingId, p_accept: accept, p_reason: reason })
   await refresh()
   return dbError(error)
 }
 
 /* ---------- pescador ---------- */
 
-export async function book(outingId: string, seats: number): Promise<string | null> {
-  const { error } = await supabase.rpc('book_outing', { p_outing: outingId, p_seats: seats })
+export async function requestBooking(outingId: string, seats: number, message: string): Promise<string | null> {
+  const { error } = await supabase.rpc('request_booking', { p_outing: outingId, p_seats: seats, p_message: message })
   await refresh()
   return dbError(error)
 }
@@ -352,4 +497,38 @@ export async function addReview(bookingId: string, rating: number, comment: stri
   if (error) return dbError(error)
   await refresh()
   return null
+}
+
+/* ---------- chat ---------- */
+
+export async function loadMessages(conversationId: string) {
+  const { data, error } = await supabase
+    .from('messages').select('*').eq('conversation_id', conversationId).order('created_at', { ascending: true }).limit(500)
+  if (error) return
+  const list = (data ?? []).map(toMessage)
+  const prev = state.messages[conversationId]
+  if (prev && prev.length === list.length && prev[prev.length - 1]?.id === list[list.length - 1]?.id) return
+  commit({ messages: { ...state.messages, [conversationId]: list } })
+}
+
+export async function sendMessage(conversationId: string, body: string): Promise<string | null> {
+  const text = body.trim()
+  if (!text) return null
+  const { error } = await supabase.rpc('send_message', { p_conversation: conversationId, p_body: text })
+  if (error) return dbError(error)
+  await Promise.all([loadMessages(conversationId), refresh()])
+  return null
+}
+
+export function markConversationRead(conversationId: string) {
+  const me = state.me
+  const c = state.conversations.find((x) => x.id === conversationId)
+  if (!me || !c || !isUnread(c, me.id)) return
+  const now = new Date().toISOString()
+  commit({
+    conversations: state.conversations.map((x) =>
+      x.id !== conversationId ? x : me.id === x.ownerId ? { ...x, ownerReadAt: now } : { ...x, fisherReadAt: now },
+    ),
+  })
+  void supabase.rpc('mark_conversation_read', { p_conversation: conversationId }).then(() => undefined)
 }

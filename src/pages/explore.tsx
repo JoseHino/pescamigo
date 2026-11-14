@@ -1,11 +1,11 @@
 import { useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { Banknote, CalendarX, ChevronRight, Clock, CreditCard, MapPin, Ruler, ShieldCheck, Users, X } from 'lucide-react'
+import { Banknote, CalendarX, ChevronRight, Clock, MapPin, MessageCircle, Repeat, Ruler, ShieldCheck, Users, X } from 'lucide-react'
 import MapView from '../components/MapView'
-import { Button, Chip, Empty, Header, OutingTicket, Rating, Stars } from '../components/ui'
-import { boatRating, isPast, seatsLeft, upcomingOutings, useAppState, useMe } from '../data/store'
+import { Button, Chip, Empty, Header, OutingTicket, Rating, Stars, StatusBadge } from '../components/ui'
+import { boatRating, bookingWindow, conversationFor, myActiveBooking, seatsLeft, upcomingOutings, useAppState, useMe } from '../data/store'
 import { PORTS, portById } from '../data/seed'
-import { FISHING_TYPES, SERVICE_FEE, dayLabel, duration, euro, longDate, shortDate } from '../lib/format'
+import { FISHING_TYPES, dayLabel, duration, euro, longDate, shortDate } from '../lib/format'
 
 export function MapPage() {
   const s = useAppState()
@@ -78,10 +78,9 @@ export function OutingsPage() {
   const [port, setPort] = useState<string | null>(null)
   const [type, setType] = useState<string | null>(null)
   const list = upcomingOutings(s).filter((o) => {
-    const boat = s.boats.find((b) => b.id === o.boatId)
-    return (!port || boat?.portId === port) && (!type || o.type === type)
+    return (!port || o.portId === port) && (!type || o.type === type)
   })
-  const usedPorts = PORTS.filter((p) => s.boats.some((b) => b.portId === p.id))
+  const usedPorts = PORTS.filter((p) => upcomingOutings(s).some((o) => o.portId === p.id))
   return (
     <div className="flex h-full flex-col">
       <Header title="Salidas publicadas" />
@@ -117,86 +116,121 @@ export function OutingDetail() {
   const me = useMe()
   const o = s.outings.find((x) => x.id === id)
   const boat = o ? s.boats.find((b) => b.id === o.boatId) : null
-  if (!o || !boat) return <NotFound what="Esta salida ya no está disponible." />
-  const port = portById(boat.portId)
+  if (!o || !boat || !me) return <NotFound what="Esta salida ya no está disponible." />
+  const port = portById(o.portId)
   const owner = s.users.find((u) => u.id === boat.ownerId)
   const left = seatsLeft(s, o)
-  const mine = s.bookings.find((b) => b.outingId === o.id && b.fisherId === me?.id && b.status === 'confirmed')
-  const closed = o.status !== 'open' || isPast(o)
+  const mine = myActiveBooking(s, o.id, me.id)
+  const chat = mine ? conversationFor(s, mine.id) : null
+  const win = bookingWindow(boat, o)
+  const isOwner = boat.ownerId === me.id
+  const { paymentsEnabled, commissionPct } = s.settings
 
   const rows = [
     { icon: Clock, label: 'Horario', value: `${o.start} – ${o.end} (${duration(o.start, o.end)})` },
     { icon: MapPin, label: 'Puerto de salida', value: `${port.name}, ${port.town}` },
-    { icon: Users, label: 'Plazas', value: left === 0 ? 'Completa' : `${left} libres de ${o.seats}` },
+    { icon: Users, label: 'Plazas', value: o.status === 'cancelled' ? 'Salida cancelada' : left === 0 ? 'Completa' : `${left} libres de ${o.seats}` },
   ]
 
   return (
     <div className="flex h-full flex-col">
       <Header title={longDate(o.date)} back />
       <div className="flex-1 overflow-y-auto">
-        <img src={boat.photos[0]} alt="" className="h-44 w-full object-cover lg:mx-auto lg:mt-6 lg:h-80 lg:max-w-[42rem] lg:rounded-2xl" />
+        <img src={boat.photos[0]} alt="" className="h-44 w-full bg-sea-50 object-cover lg:mx-auto lg:mt-6 lg:h-80 lg:max-w-[42rem] lg:rounded-2xl" />
         <div className="col space-y-4 p-4">
           <div>
-            <span className="rounded-full bg-sea-50 px-2.5 py-1 text-xs font-semibold text-sea-dark">{o.type}</span>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="rounded-full bg-sea-50 px-2.5 py-1 text-xs font-semibold text-sea-dark">{o.type}</span>
+              {o.ruleId && (
+                <span className="flex items-center gap-1 rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-ink-soft ring-1 ring-line">
+                  <Repeat size={12} /> Salida habitual
+                </span>
+              )}
+            </div>
             <h2 className="mt-2 text-2xl font-extrabold tracking-tight">
               <span className="tnum">{o.start}</span> <span className="text-ink-soft">→</span> <span className="tnum">{o.end}</span>
             </h2>
+            <p className="mt-1 text-[13px] text-ink-soft">
+              {o.ruleId
+                ? 'Es una fecha prevista del calendario habitual del patrón: la plaza queda confirmada cuando el patrón acepta tu solicitud.'
+                : 'El patrón confirma cada solicitud de plaza.'}
+            </p>
           </div>
 
           <ul className="divide-y divide-line rounded-2xl border border-line bg-white">
             {rows.map((r) => (
               <li key={r.label} className="flex items-center gap-3 px-4 py-3">
                 <r.icon size={18} className="shrink-0 text-sea" />
-                <span className="flex-1 text-[13px] text-ink-soft">{r.label}</span>
-                <span className="text-right text-[13px] font-semibold">{r.value}</span>
+                <span className="shrink-0 text-[13px] text-ink-soft">{r.label}</span>
+                <span className="min-w-0 flex-1 text-right text-[13px] font-semibold">{r.value}</span>
               </li>
             ))}
           </ul>
 
           {o.notes && (
             <div className="rounded-2xl border border-line bg-white p-4">
-              <p className="text-xs font-semibold uppercase tracking-wide text-ink-soft">Nota del propietario</p>
-              <p className="mt-1 text-sm">{o.notes}</p>
+              <p className="text-xs font-semibold uppercase tracking-wide text-ink-soft">Nota del patrón</p>
+              <p className="wrap-anywhere mt-1 whitespace-pre-line text-sm">{o.notes}</p>
             </div>
           )}
 
           <Link to={`/barco/${boat.id}`} className="flex items-center gap-3 rounded-2xl border border-line bg-white p-3">
-            <img src={boat.photos[boat.photos.length > 1 ? 1 : 0]} alt="" className="h-14 w-14 rounded-xl object-cover" />
+            <img src={boat.photos[boat.photos.length > 1 ? 1 : 0]} alt="" className="h-14 w-14 shrink-0 rounded-xl bg-sea-50 object-cover" />
             <div className="min-w-0 flex-1">
               <p className="truncate text-[15px] font-bold">{boat.name}</p>
               <p className="truncate text-xs text-ink-soft">Patrón: {owner?.name ?? '—'}</p>
               <Rating boatId={boat.id} />
             </div>
-            <ChevronRight size={18} className="text-ink-soft" />
+            <ChevronRight size={18} className="shrink-0 text-ink-soft" />
           </Link>
 
           <div className="rounded-2xl border border-line bg-white p-4">
             <p className="text-xs font-semibold uppercase tracking-wide text-ink-soft">Lo que pagas por plaza</p>
             <div className="mt-3 flex items-center gap-3">
-              <Banknote size={18} className="text-ok" />
-              <span className="flex-1 text-sm">Reparto de gastos, en efectivo al propietario</span>
-              <b className="tnum">{euro(o.costShare)}</b>
+              <Banknote size={18} className="shrink-0 text-ok" />
+              <span className="min-w-0 flex-1 text-sm">
+                {paymentsEnabled ? 'Reparto de gastos, con tarjeta en la app' : 'Reparto de gastos, en efectivo al patrón el día de la salida'}
+              </span>
+              <b className="tnum shrink-0">{euro(o.costShare)}</b>
             </div>
-            <div className="mt-2.5 flex items-center gap-3">
-              <CreditCard size={18} className="text-sea" />
-              <span className="flex-1 text-sm">{SERVICE_FEE > 0 ? 'Gestión de Pescamigo, con tarjeta al reservar' : 'Reservar en Pescamigo'}</span>
-              <b className="tnum">{SERVICE_FEE > 0 ? euro(SERVICE_FEE) : 'Gratis'}</b>
-            </div>
+            <p className="mt-2 text-xs text-ink-soft">
+              {paymentsEnabled
+                ? `Incluye la comisión de Pescamigo (${String(commissionPct).replace('.', ',')} %). Verás el desglose antes de enviar la solicitud.`
+                : 'Solicitar plaza en Pescamigo es gratis.'}
+            </p>
           </div>
         </div>
       </div>
 
-      {me?.role === 'fisher' && (
+      {me.role === 'fisher' && (
         <div className="col border-t border-line bg-white p-4">
           {mine ? (
-            <Button full variant="outline" onClick={() => nav('/reservas')}>Ya tienes plaza. Ver mi reserva</Button>
-          ) : closed ? (
-            <Button full disabled>Esta salida ya no admite reservas</Button>
+            <div className="space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="text-sm font-semibold">Tu solicitud</span>
+                <StatusBadge status={mine.status} />
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <Button variant="outline" onClick={() => nav('/reservas')}>Mis reservas</Button>
+                {chat ? (
+                  <Button onClick={() => nav(`/chat/${chat.id}`)}><MessageCircle size={16} /> Chat</Button>
+                ) : (
+                  <Button disabled title="El chat se abre cuando el patrón confirma la reserva">Chat</Button>
+                )}
+              </div>
+            </div>
+          ) : !win.open ? (
+            <p className="rounded-xl bg-foam px-4 py-3 text-center text-sm font-semibold text-ink-soft">{win.reason}</p>
           ) : left === 0 ? (
-            <Button full disabled>Salida completa</Button>
+            <p className="rounded-xl bg-foam px-4 py-3 text-center text-sm font-semibold text-ink-soft">Salida completa</p>
           ) : (
-            <Button full variant="accent" onClick={() => nav(`/reservar/${o.id}`)}>Reservar plaza</Button>
+            <Button full variant="accent" onClick={() => nav(`/reservar/${o.id}`)}>Solicitar plaza</Button>
           )}
+        </div>
+      )}
+      {isOwner && (
+        <div className="col border-t border-line bg-white p-4">
+          <Button full variant="outline" onClick={() => nav(`/salida-editar/${o.id}`)}>Gestionar esta salida</Button>
         </div>
       )}
     </div>
@@ -227,8 +261,8 @@ export function BoatProfile() {
 
         <div className="col space-y-5 p-4">
           <div>
-            <h2 className="text-2xl font-extrabold tracking-tight">{boat.name}</h2>
-            <p className="text-sm text-ink-soft">{boat.model} · Patrón: {owner?.name ?? '—'}</p>
+            <h2 className="wrap-anywhere text-2xl font-extrabold tracking-tight">{boat.name}</h2>
+            <p className="wrap-anywhere text-sm text-ink-soft">{boat.model} · Patrón: {owner?.name ?? '—'}</p>
             <div className="mt-2 flex items-center gap-2">
               <Stars value={r.avg} size={16} />
               <span className="text-sm font-semibold">
@@ -251,7 +285,7 @@ export function BoatProfile() {
             ))}
           </div>
 
-          <p className="text-sm leading-relaxed">{boat.description}</p>
+          <p className="wrap-anywhere whitespace-pre-line text-sm leading-relaxed">{boat.description}</p>
 
           <div className="rounded-2xl border border-line bg-white p-4 text-[13px]">
             <p className="mb-2 flex items-center gap-2 font-semibold"><ShieldCheck size={16} className="text-sea" /> Declarado por el propietario</p>
@@ -275,12 +309,12 @@ export function BoatProfile() {
               <ul className="space-y-3">
                 {reviews.map((x) => (
                   <li key={x.id} className="rounded-2xl border border-line bg-white p-4">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-bold">{x.authorName}</span>
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="truncate text-sm font-bold">{x.authorName}</span>
                       <span className="text-xs text-ink-soft">{shortDate(x.date)}</span>
                     </div>
                     <Stars value={x.rating} />
-                    <p className="mt-1.5 text-sm leading-relaxed">{x.comment}</p>
+                    <p className="wrap-anywhere mt-1.5 text-sm leading-relaxed">{x.comment}</p>
                     {x.photo && <img src={x.photo} alt="Foto de la salida" className="mt-3 h-36 w-full rounded-xl object-cover" />}
                   </li>
                 ))}
