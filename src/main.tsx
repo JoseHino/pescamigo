@@ -1,7 +1,7 @@
 import { StrictMode, type ReactNode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { HashRouter, NavLink, Navigate, Outlet, Route, Routes } from 'react-router-dom'
-import { Bell, CalendarDays, CirclePlus, Map as MapIcon, Ticket, User as UserIcon, Waves } from 'lucide-react'
+import { Bell, CalendarDays, CirclePlus, Map as MapIcon, Sailboat, Ticket, User as UserIcon, Waves } from 'lucide-react'
 import './index.css'
 import { useAppState, useMe } from './data/store'
 import { Auth, RoleSetup, Welcome } from './pages/auth'
@@ -12,7 +12,7 @@ import { Alerts, Profile } from './pages/account'
 import type { Role } from './types'
 
 function Frame({ children }: { children: ReactNode }) {
-  return <div className="relative mx-auto h-full max-w-[440px] overflow-hidden bg-foam shadow-2xl">{children}</div>
+  return <div className="relative mx-auto h-full max-w-[440px] overflow-hidden bg-foam shadow-2xl lg:max-w-none lg:shadow-none">{children}</div>
 }
 
 /** Solo para quien no ha iniciado sesión. */
@@ -30,7 +30,9 @@ function Private({ role }: { role?: Role }) {
   return <Outlet />
 }
 
-function Tabs() {
+/** Menú principal: barra inferior en el móvil, columna lateral en el ordenador.
+ *  En las pantallas de detalle el móvil no lo muestra (tienen su propio botón de volver). */
+function Tabs({ detail = false }: { detail?: boolean }) {
   const s = useAppState()
   const me = useMe()
   const unread = s.notices.filter((n) => n.userId === me?.id && !n.read).length
@@ -51,13 +53,27 @@ function Tabs() {
           { to: '/perfil', icon: UserIcon, label: 'Perfil' },
         ]
   return (
-    <div className="flex h-full flex-col">
-      <main className="min-h-0 flex-1">
-        <Outlet />
-      </main>
-      <nav aria-label="Principal" className="grid shrink-0 grid-cols-5 border-t border-line bg-white pb-[env(safe-area-inset-bottom)]">
+    <div className="flex h-full flex-col lg:flex-row">
+      <nav
+        aria-label="Principal"
+        className={`${detail ? 'hidden' : 'grid'} order-last shrink-0 grid-cols-5 border-t border-line bg-white pb-[env(safe-area-inset-bottom)] lg:order-first lg:flex lg:w-60 lg:flex-col lg:gap-1 lg:border-r lg:border-t-0 lg:p-4`}
+      >
+        <div className="mb-6 hidden items-center gap-2.5 px-2 pt-2 lg:flex">
+          <span className="grid h-9 w-9 place-items-center rounded-xl bg-ink text-white">
+            <Sailboat size={20} />
+          </span>
+          <span className="text-lg font-extrabold tracking-tight">Pescamigo</span>
+        </div>
         {tabs.map((t) => (
-          <NavLink key={t.to} to={t.to} className={({ isActive }) => `relative flex flex-col items-center gap-0.5 py-2 text-[11px] font-semibold ${isActive ? 'text-sea' : 'text-ink-soft'}`}>
+          <NavLink
+            key={t.to}
+            to={t.to}
+            className={({ isActive }) =>
+              `relative flex flex-col items-center gap-0.5 py-2 text-[11px] font-semibold lg:flex-row lg:gap-3 lg:rounded-xl lg:px-3 lg:py-2.5 lg:text-sm ${
+                isActive ? 'text-sea lg:bg-sea-50' : 'text-ink-soft lg:hover:bg-foam'
+              }`
+            }
+          >
             <span className="relative">
               <t.icon size={22} />
               {t.to === '/avisos' && unread > 0 && (
@@ -68,6 +84,9 @@ function Tabs() {
           </NavLink>
         ))}
       </nav>
+      <main className="min-h-0 min-w-0 flex-1">
+        <Outlet />
+      </main>
     </div>
   )
 }
@@ -121,8 +140,10 @@ function Boot() {
               <Route path="/avisos" element={<Alerts />} />
               <Route path="/perfil" element={<Profile />} />
             </Route>
-            <Route path="/salida/:id" element={<OutingDetail />} />
-            <Route path="/barco/:id" element={<BoatProfile />} />
+            <Route element={<Tabs detail />}>
+              <Route path="/salida/:id" element={<OutingDetail />} />
+              <Route path="/barco/:id" element={<BoatProfile />} />
+            </Route>
           </Route>
 
           <Route element={<Private role="fisher" />}>
@@ -130,8 +151,10 @@ function Boot() {
               <Route path="/salidas" element={<OutingsPage />} />
               <Route path="/reservas" element={<Trips />} />
             </Route>
-            <Route path="/reservar/:id" element={<Checkout />} />
-            <Route path="/valorar/:id" element={<ReviewForm />} />
+            <Route element={<Tabs detail />}>
+              <Route path="/reservar/:id" element={<Checkout />} />
+              <Route path="/valorar/:id" element={<ReviewForm />} />
+            </Route>
           </Route>
 
           <Route element={<Private role="owner" />}>
@@ -139,7 +162,9 @@ function Boot() {
               <Route path="/mis-salidas" element={<OwnerOutings />} />
               <Route path="/publicar" element={<Publish />} />
             </Route>
-            <Route path="/mi-barco" element={<BoatEdit />} />
+            <Route element={<Tabs detail />}>
+              <Route path="/mi-barco" element={<BoatEdit />} />
+            </Route>
           </Route>
 
           <Route path="*" element={<Navigate to="/" replace />} />

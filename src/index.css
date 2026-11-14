@@ -43,3 +43,14 @@ body {
   .sheet-in { animation: sheet .22s ease-out; }
   @keyframes sheet { from { transform: translateY(16px); opacity: 0; } }
 }
+
+/* ----- Escritorio ----- */
+@media (min-width: 1024px) {
+  /* columna de lectura centrada dentro del área de contenido */
+  .col { padding-left: max(1.5rem, calc(50% - 21rem)); padding-right: max(1.5rem, calc(50% - 21rem)); }
+  .col-narrow { padding-left: max(1.5rem, calc(50% - 14rem)); padding-right: max(1.5rem, calc(50% - 14rem)); }
+  /* listas de tarjetas en varias columnas */
+  .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 1rem; align-content: start; padding: 1.5rem; }
+  .cards > * { margin: 0 !important; }
+  .cards > .cards-full { grid-column: 1 / -1; justify-self: center; }
+}

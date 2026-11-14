@@ -68,7 +68,7 @@ export default function MapView({ items, selectedId, onSelect }: { items: MapBoa
         .addTo(g)
     }
     if (!fitted.current && pts.length) {
-      m.fitBounds(L.latLngBounds(pts), { padding: [48, 48], animate: false })
+      m.fitBounds(L.latLngBounds(pts), { padding: [48, 48], animate: false, maxZoom: 11 })
       fitted.current = true
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

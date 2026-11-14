@@ -20,14 +20,14 @@ function GoogleMark() {
 export function Welcome() {
   const nav = useNavigate()
   return (
-    <div className="flex h-full flex-col bg-ink text-white">
-      <div className="relative flex flex-1 flex-col justify-end overflow-hidden px-6 pb-8">
+    <div className="flex h-full flex-col bg-ink text-white lg:flex-row">
+      <div className="relative flex flex-1 flex-col justify-end overflow-hidden px-6 pb-8 lg:px-16 lg:pb-20">
         <svg className="absolute inset-x-0 bottom-0 w-full text-white/[0.06]" viewBox="0 0 440 300" fill="currentColor" aria-hidden="true">
           <path d="M0 120q55-30 110 0t110 0 110 0 110 0v180H0z" />
           <path d="M0 180q55-30 110 0t110 0 110 0 110 0v120H0z" />
           <path d="M0 240q55-30 110 0t110 0 110 0 110 0v60H0z" />
         </svg>
-        <svg className="absolute inset-x-0 top-[9%] mx-auto w-[78%]" viewBox="0 0 320 200" fill="none" aria-hidden="true">
+        <svg className="absolute inset-x-0 top-[9%] mx-auto w-[78%] lg:inset-x-auto lg:right-16 lg:top-16 lg:mx-0 lg:w-[340px]" viewBox="0 0 320 200" fill="none" aria-hidden="true">
           <circle cx="232" cy="78" r="46" fill="#F26B21" />
           <path d="M150 34v98H86z" fill="#fff" />
           <path d="M164 62v70h52z" fill="#fff" opacity=".8" />
@@ -35,22 +35,26 @@ export function Welcome() {
           <path d="M236 144l44-66" stroke="#fff" strokeWidth="3" strokeLinecap="round" />
           <path d="M280 78v46" stroke="#fff" strokeWidth="1.5" strokeDasharray="3 5" />
         </svg>
-        <div className="relative">
+        <div className="relative lg:max-w-xl">
           <div className="mb-6 flex items-center gap-2.5">
             <span className="grid h-10 w-10 place-items-center rounded-xl bg-white text-ink">
               <Sailboat size={22} />
             </span>
             <span className="text-xl font-extrabold tracking-tight">Pescamigo</span>
           </div>
-          <h1 className="text-[34px] font-extrabold leading-[1.08] tracking-tight">
+          <h1 className="text-[34px] font-extrabold leading-[1.08] tracking-tight lg:text-[52px]">
             Hay un barco que sale a pescar <span className="text-buoy">y le sobra sitio.</span>
           </h1>
-          <p className="mt-4 text-[15px] leading-relaxed text-white/75">
+          <p className="mt-4 text-[15px] leading-relaxed text-white/75 lg:text-lg">
             Los propietarios publican sus salidas. Los pescadores sin barco reciben el aviso, reservan plaza y comparten gastos a bordo.
           </p>
         </div>
       </div>
-      <div className="space-y-3 rounded-t-3xl bg-foam px-6 pb-8 pt-6 text-ink">
+      <div className="space-y-3 rounded-t-3xl bg-foam px-6 pb-8 pt-6 text-ink lg:flex lg:w-[440px] lg:flex-col lg:justify-center lg:rounded-none lg:px-12">
+        <div className="mb-3 hidden lg:block">
+          <p className="text-2xl font-extrabold tracking-tight">Entra en Pescamigo</p>
+          <p className="mt-1 text-sm text-ink-soft">Crea tu cuenta y elige si tienes barco o buscas plaza.</p>
+        </div>
         <Button full onClick={() => nav('/acceso?modo=registro')}>Crear cuenta</Button>
         <Button full variant="outline" onClick={() => nav('/acceso')}>Ya tengo cuenta</Button>
       </div>
@@ -81,7 +85,7 @@ export function Auth() {
   return (
     <div className="flex h-full flex-col bg-foam">
       <Header title={register ? 'Crear cuenta' : 'Iniciar sesión'} back />
-      <div className="flex-1 overflow-y-auto px-5 py-6">
+      <div className="col-narrow flex-1 overflow-y-auto px-5 py-6 lg:py-12">
         {GOOGLE_ENABLED && (
           <>
             <button onClick={google} className="flex w-full items-center justify-center gap-2.5 rounded-xl border border-line bg-white py-3 text-[15px] font-semibold hover:bg-foam">
@@ -136,7 +140,7 @@ export function RoleSetup() {
     { id: 'owner', icon: Anchor, title: 'Tengo barco', text: 'Publico mis salidas con fecha y horario y comparto gastos con quien venga.' },
   ]
   return (
-    <div className="flex h-full flex-col bg-foam px-5 py-8">
+    <div className="col-narrow flex h-full flex-col bg-foam px-5 py-8 lg:py-16">
       <h1 className="text-2xl font-extrabold tracking-tight">¿Cómo vas a usar Pescamigo?</h1>
       <p className="mt-2 text-sm text-ink-soft">Elige uno. Define lo que ves en la app.</p>
       <div className="mt-6 flex-1 space-y-3">

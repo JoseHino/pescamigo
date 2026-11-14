@@ -29,7 +29,7 @@ export function MapPage() {
         </div>
       </div>
       {s.boats.length === 0 && (
-        <div className="absolute inset-x-3 bottom-3 z-[500] rounded-2xl bg-white p-4 shadow-xl">
+        <div className="absolute inset-x-3 bottom-3 z-[500] rounded-2xl bg-white p-4 shadow-xl lg:inset-x-auto lg:bottom-5 lg:left-5 lg:w-[380px]">
           <p className="text-[15px] font-bold">Todavía no hay barcos en el mapa</p>
           <p className="mt-1 text-sm text-ink-soft">
             {me?.role === 'owner' ? 'Da de alta el tuyo desde Perfil y aparecerá aquí.' : 'En cuanto un propietario dé de alta su barco lo verás aquí.'}
@@ -37,7 +37,7 @@ export function MapPage() {
         </div>
       )}
       {boat && (
-        <div className="sheet-in absolute inset-x-3 bottom-3 z-[500] rounded-2xl bg-white p-3 shadow-xl">
+        <div className="sheet-in absolute inset-x-3 bottom-3 z-[500] rounded-2xl bg-white p-3 shadow-xl lg:inset-x-auto lg:bottom-5 lg:left-5 lg:w-[380px]">
           <button onClick={() => setSel(null)} aria-label="Cerrar" className="absolute right-2 top-2 grid h-8 w-8 place-items-center rounded-full bg-white/90 text-ink-soft hover:bg-foam">
             <X size={16} />
           </button>
@@ -86,20 +86,20 @@ export function OutingsPage() {
     <div className="flex h-full flex-col">
       <Header title="Salidas publicadas" />
       <div className="border-b border-line bg-white py-2.5">
-        <div className="flex gap-2 overflow-x-auto px-4 pb-2 [scrollbar-width:none]">
+        <div className="flex gap-2 overflow-x-auto px-4 pb-2 [scrollbar-width:none] lg:flex-wrap lg:px-6">
           <Chip active={!port} onClick={() => setPort(null)}>Todos los puertos</Chip>
           {usedPorts.map((p) => (
             <Chip key={p.id} active={port === p.id} onClick={() => setPort(port === p.id ? null : p.id)}>{p.name}</Chip>
           ))}
         </div>
-        <div className="flex gap-2 overflow-x-auto px-4 [scrollbar-width:none]">
+        <div className="flex gap-2 overflow-x-auto px-4 [scrollbar-width:none] lg:flex-wrap lg:px-6">
           <Chip active={!type} onClick={() => setType(null)}>Cualquier pesca</Chip>
           {FISHING_TYPES.map((t) => (
             <Chip key={t} active={type === t} onClick={() => setType(type === t ? null : t)}>{t}</Chip>
           ))}
         </div>
       </div>
-      <div className="flex-1 space-y-3 overflow-y-auto p-4">
+      <div className="cards flex-1 space-y-3 overflow-y-auto p-4">
         {list.length === 0 ? (
           <Empty icon={<CalendarX size={24} />} title="Ninguna salida con esos filtros" text="Quita algún filtro o activa los avisos para enterarte cuando se publique una." />
         ) : (
@@ -134,8 +134,8 @@ export function OutingDetail() {
     <div className="flex h-full flex-col">
       <Header title={longDate(o.date)} back />
       <div className="flex-1 overflow-y-auto">
-        <img src={boat.photos[0]} alt="" className="h-44 w-full object-cover" />
-        <div className="space-y-4 p-4">
+        <img src={boat.photos[0]} alt="" className="h-44 w-full object-cover lg:mx-auto lg:mt-6 lg:h-80 lg:max-w-[42rem] lg:rounded-2xl" />
+        <div className="col space-y-4 p-4">
           <div>
             <span className="rounded-full bg-sea-50 px-2.5 py-1 text-xs font-semibold text-sea-dark">{o.type}</span>
             <h2 className="mt-2 text-2xl font-extrabold tracking-tight">
@@ -187,7 +187,7 @@ export function OutingDetail() {
       </div>
 
       {me?.role === 'fisher' && (
-        <div className="border-t border-line bg-white p-4">
+        <div className="col border-t border-line bg-white p-4">
           {mine ? (
             <Button full variant="outline" onClick={() => nav('/reservas')}>Ya tienes plaza. Ver mi reserva</Button>
           ) : closed ? (
@@ -219,13 +219,13 @@ export function BoatProfile() {
     <div className="flex h-full flex-col">
       <Header title={boat.name} back />
       <div className="flex-1 overflow-y-auto pb-6">
-        <div className="flex snap-x snap-mandatory gap-2 overflow-x-auto p-4 pb-0 [scrollbar-width:none]">
+        <div className="col flex snap-x snap-mandatory gap-2 overflow-x-auto p-4 pb-0 [scrollbar-width:none] lg:pt-6">
           {gallery.map((src, i) => (
-            <img key={i} src={src} alt={`Foto ${i + 1} de ${boat.name}`} className="h-48 w-[82%] shrink-0 snap-center rounded-2xl object-cover" />
+            <img key={i} src={src} alt={`Foto ${i + 1} de ${boat.name}`} className="h-48 w-[82%] shrink-0 snap-center rounded-2xl object-cover lg:h-72 lg:w-[70%]" />
           ))}
         </div>
 
-        <div className="space-y-5 p-4">
+        <div className="col space-y-5 p-4">
           <div>
             <h2 className="text-2xl font-extrabold tracking-tight">{boat.name}</h2>
             <p className="text-sm text-ink-soft">{boat.model} · Patrón: {owner?.name ?? '—'}</p>

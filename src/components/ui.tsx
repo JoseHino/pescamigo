@@ -31,7 +31,7 @@ export function Button({ variant = 'primary', full, className = '', ...p }: BtnP
 export function Header({ title, back, right }: { title: string; back?: boolean; right?: ReactNode }) {
   const nav = useNavigate()
   return (
-    <header className="flex h-14 shrink-0 items-center gap-2 border-b border-line bg-white px-3">
+    <header className="flex h-14 shrink-0 items-center gap-2 border-b border-line bg-white px-3 lg:h-16 lg:px-6">
       {back && (
         <button onClick={() => nav(-1)} aria-label="Volver" className="grid h-10 w-10 place-items-center rounded-full hover:bg-foam">
           <ArrowLeft size={20} />
@@ -102,7 +102,7 @@ export function ErrorMsg({ children }: { children: ReactNode }) {
 
 export function Empty({ icon, title, text, action }: { icon: ReactNode; title: string; text: string; action?: ReactNode }) {
   return (
-    <div className="mx-auto flex max-w-xs flex-col items-center px-4 py-14 text-center">
+    <div className="cards-full mx-auto flex max-w-xs flex-col items-center px-4 py-14 text-center">
       <div className="mb-4 grid h-14 w-14 place-items-center rounded-full bg-sea-50 text-sea">{icon}</div>
       <h2 className="text-base font-bold">{title}</h2>
       <p className="mt-1.5 text-sm text-ink-soft">{text}</p>

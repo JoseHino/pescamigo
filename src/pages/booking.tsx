@@ -36,7 +36,7 @@ export function Checkout() {
 
   if (done) {
     return (
-      <div className="flex h-full flex-col items-center justify-center bg-foam px-6 text-center">
+      <div className="col-narrow flex h-full flex-col items-center justify-center bg-foam px-6 text-center">
         <CheckCircle2 size={56} className="text-ok" />
         <h1 className="mt-4 text-2xl font-extrabold tracking-tight">Reserva confirmada</h1>
         <p className="mt-2 text-sm text-ink-soft">
@@ -54,7 +54,7 @@ export function Checkout() {
     <div className="flex h-full flex-col">
       <Header title="Confirmar reserva" back />
       <form onSubmit={submit} className="flex min-h-0 flex-1 flex-col">
-        <div className="flex-1 space-y-4 overflow-y-auto p-4">
+        <div className="col flex-1 space-y-4 overflow-y-auto p-4 lg:py-6">
           <div className="rounded-2xl border border-line bg-white p-4">
             <p className="text-[15px] font-bold">{boat.name} · {o.type}</p>
             <p className="text-sm text-ink-soft">{longDate(o.date)}, {o.start} – {o.end}</p>
@@ -91,7 +91,7 @@ export function Checkout() {
           </label>
           <ErrorMsg>{err}</ErrorMsg>
         </div>
-        <div className="border-t border-line bg-white p-4">
+        <div className="col border-t border-line bg-white p-4">
           <Button full variant="accent" type="submit" disabled={busy}>
             {busy ? 'Reservando…' : seats === 1 ? 'Reservar plaza' : `Reservar ${seats} plazas`}
           </Button>
@@ -115,7 +115,7 @@ export function Trips() {
   return (
     <div className="flex h-full flex-col">
       <Header title="Mis reservas" />
-      <div className="flex-1 overflow-y-auto p-4">
+      <div className="col flex-1 overflow-y-auto p-4 lg:py-6">
         {mine.length === 0 ? (
           <Empty icon={<Ticket size={24} />} title="Todavía no has reservado" text="Cuando reserves plaza en una salida aparecerá aquí."
             action={<Link to="/salidas" className="font-semibold text-sea">Ver salidas publicadas</Link>} />
@@ -203,7 +203,7 @@ export function ReviewForm() {
   return (
     <div className="flex h-full flex-col">
       <Header title="Valorar la salida" back />
-      <form onSubmit={submit} className="flex-1 space-y-5 overflow-y-auto p-4">
+      <form onSubmit={submit} className="col flex-1 space-y-5 overflow-y-auto p-4 lg:py-6">
         <div>
           <p className="text-lg font-bold">{boat.name}</p>
           <p className="text-sm text-ink-soft">{longDate(o.date)} · {o.type}</p>

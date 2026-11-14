@@ -56,7 +56,7 @@ export function OwnerOutings() {
   return (
     <div className="flex h-full flex-col">
       <Header title="Mis salidas" />
-      <div className="flex-1 overflow-y-auto p-4">
+      <div className="col flex-1 overflow-y-auto p-4 lg:py-6">
         {all.length === 0 ? (
           <Empty icon={<CalendarPlus size={24} />} title="Aún no has publicado ninguna salida" text="Publica la próxima con fecha y horario y avisaremos a los pescadores de la zona."
             action={<Link to="/publicar" className="font-semibold text-sea">Publicar salida</Link>} />
@@ -119,7 +119,7 @@ export function Publish() {
     <div className="flex h-full flex-col">
       <Header title="Publicar salida" />
       <form onSubmit={submit} className="flex min-h-0 flex-1 flex-col">
-        <div className="flex-1 space-y-4 overflow-y-auto p-4">
+        <div className="col flex-1 space-y-4 overflow-y-auto p-4 lg:py-6">
           <p className="text-sm text-ink-soft">Barco: <b className="text-ink">{boat.name}</b></p>
           <Field label="Fecha">
             <input type="date" className={inputCls} min={addDays(0)} value={f.date} onChange={(e) => setF({ ...f, date: e.target.value })} />
@@ -180,7 +180,7 @@ export function Publish() {
           </Field>
           <ErrorMsg>{err}</ErrorMsg>
         </div>
-        <div className="border-t border-line bg-white p-4">
+        <div className="col border-t border-line bg-white p-4">
           <Button full variant="accent" type="submit" disabled={busy}>{busy ? 'Publicando…' : 'Publicar salida'}</Button>
         </div>
       </form>
@@ -236,7 +236,7 @@ export function BoatEdit() {
     <div className="flex h-full flex-col">
       <Header title={boat ? 'Mi barco' : 'Da de alta tu barco'} back={!!boat} />
       <form onSubmit={submit} className="flex min-h-0 flex-1 flex-col">
-        <div className="flex-1 space-y-4 overflow-y-auto p-4">
+        <div className="col flex-1 space-y-4 overflow-y-auto p-4 lg:py-6">
           <div>
             <p className="mb-1.5 text-[13px] font-semibold">Fotos</p>
             <div className="flex gap-2 overflow-x-auto [scrollbar-width:none]">
@@ -291,7 +291,7 @@ export function BoatEdit() {
           </div>
           <ErrorMsg>{err}</ErrorMsg>
         </div>
-        <div className="border-t border-line bg-white p-4">
+        <div className="col border-t border-line bg-white p-4">
           <Button full type="submit" disabled={busy}>{busy ? 'Guardando…' : 'Guardar barco'}</Button>
         </div>
       </form>

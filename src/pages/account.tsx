@@ -21,12 +21,12 @@ export function Alerts() {
   return (
     <div className="flex h-full flex-col">
       <Header title="Avisos" />
-      <div className="flex-1 overflow-y-auto">
+      <div className="col flex-1 overflow-y-auto lg:py-6">
         {list.length === 0 ? (
           <Empty icon={<Bell size={24} />} title="Sin avisos por ahora"
             text={me?.role === 'fisher' ? 'Te avisaremos cuando un barco publique una salida que encaje con tus preferencias.' : 'Aquí verás las reservas y valoraciones de tus salidas.'} />
         ) : (
-          <ul className="divide-y divide-line bg-white">
+          <ul className="divide-y divide-line bg-white lg:overflow-hidden lg:rounded-2xl lg:border lg:border-line">
             {list.map((n) => (
               <li key={n.id}>
                 <Link to={n.link} className="flex gap-3 px-4 py-3.5">
@@ -61,7 +61,7 @@ export function Profile() {
   return (
     <div className="flex h-full flex-col">
       <Header title="Perfil" />
-      <div className="flex-1 space-y-5 overflow-y-auto p-4">
+      <div className="col flex-1 space-y-5 overflow-y-auto p-4 lg:py-6">
         <div className="flex items-center gap-4 rounded-2xl border border-line bg-white p-4">
           <span className="grid h-14 w-14 shrink-0 place-items-center rounded-full bg-ink text-lg font-bold text-white">
             {me.name.split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase()}
