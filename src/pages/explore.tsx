@@ -1,13 +1,15 @@
 import { useMemo, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import {
-  BadgeCheck, Banknote, CalendarX, ChevronLeft, ChevronRight, Clock, MapPin, MessageCircle, Repeat, Ruler, ShieldCheck, Users, X,
+  BadgeCheck, Banknote, CalendarX, Check, ChevronLeft, ChevronRight, Clock, Images, MapPin, MessageCircle, Repeat, Ruler, ShieldCheck, Users, X,
 } from 'lucide-react'
 import MapView from '../components/MapView'
-import { Button, Chip, Empty, Header, OutingTicket, OwnerBadge, Rating, SectionTitle, Stars, StatusBadge } from '../components/ui'
+import {
+  Button, Chip, Empty, Header, OutingTicket, OwnerBadge, PhotoViewer, Rating, SectionTitle, SocialLinks, Stars, StatusBadge,
+} from '../components/ui'
 import { boatRating, bookingWindow, conversationFor, myActiveBooking, seatsLeft, upcomingOutings, useAppState, useMe } from '../data/store'
 import { PORTS, portById } from '../data/seed'
-import { FISHING_TYPES, WEEKDAYS, dayLabel, duration, euro, isoDate, longDate, monthLabel, shortDate } from '../lib/format'
+import { BOAT_EQUIPMENT, FISHING_TYPES, WEEKDAYS, dayLabel, duration, euro, isoDate, longDate, monthLabel, shortDate } from '../lib/format'
 import type { Outing } from '../types'
 
 export function MapPage() {
@@ -373,6 +375,7 @@ export function OutingDetail() {
 export function BoatProfile() {
   const { id } = useParams()
   const s = useAppState()
+  const [viewer, setViewer] = useState<number | null>(null)
   const boat = s.boats.find((b) => b.id === id)
   if (!boat) return <NotFound what="No encontramos este barco." />
   const port = portById(boat.portId)
@@ -382,6 +385,8 @@ export function BoatProfile() {
   const trips = s.tripCounts[boat.ownerId] ?? 0
   const outings = upcomingOutings(s).filter((o) => o.boatId === boat.id)
   const gallery = [...boat.photos, ...reviews.flatMap((x) => (x.photo ? [x.photo] : []))]
+  const since = boat.createdAt ? new Date(boat.createdAt).toLocaleDateString('es-ES', { month: 'long', year: 'numeric' }) : ''
+  const equipment = BOAT_EQUIPMENT.filter((t) => boat.equipment.includes(t))
 
   return (
     <div className="flex h-full flex-col">
@@ -389,14 +394,31 @@ export function BoatProfile() {
       <div className="flex-1 overflow-y-auto pb-6">
         <div className="col flex snap-x snap-mandatory gap-2 overflow-x-auto p-4 pb-0 [scrollbar-width:none] lg:pt-6">
           {gallery.map((src, i) => (
-            <img key={i} src={src} alt={`Foto ${i + 1} de ${boat.name}`} className="h-48 w-[82%] shrink-0 snap-center rounded-2xl object-cover lg:h-72 lg:w-[70%]" />
+            <button
+              key={i}
+              type="button"
+              onClick={() => setViewer(i)}
+              aria-label={`Ver la foto ${i + 1} de ${gallery.length} a pantalla completa`}
+              className={`shrink-0 snap-center overflow-hidden rounded-2xl bg-sea-50 ${gallery.length === 1 ? 'w-full' : 'w-[82%] lg:w-[70%]'}`}
+            >
+              <img src={src} alt={`Foto ${i + 1} de ${boat.name}`} className="h-48 w-full object-cover lg:h-72" />
+            </button>
           ))}
         </div>
+        {gallery.length > 1 && (
+          <div className="col mt-2 flex justify-end px-4">
+            <button type="button" onClick={() => setViewer(0)} className="flex items-center gap-1.5 rounded-full border border-line bg-white px-3 py-1.5 text-xs font-semibold hover:bg-foam">
+              <Images size={14} /> Ver las {gallery.length} fotos
+            </button>
+          </div>
+        )}
+        {viewer !== null && <PhotoViewer photos={gallery} start={viewer} alt={boat.name} onClose={() => setViewer(null)} />}
 
         <div className="col space-y-5 p-4">
           <div>
             <h2 className="wrap-anywhere text-2xl font-extrabold tracking-tight">{boat.name}</h2>
-            <p className="wrap-anywhere text-sm text-ink-soft">{boat.model} · Patrón: {owner?.name ?? '—'}</p>
+            <p className="wrap-anywhere text-sm text-ink-soft">{boat.model ? `${boat.model} · ` : ''}Patrón: {owner?.name ?? '—'}</p>
+            {since && <p className="text-xs text-ink-soft">En Pescamigo desde {since}</p>}
             <div className="mt-2 flex items-center gap-2">
               <Stars value={r.avg} size={16} />
               <span className="text-sm font-semibold">
@@ -409,6 +431,7 @@ export function BoatProfile() {
                 <span className="text-[13px] text-ink-soft">{trips} {trips === 1 ? 'salida hecha' : 'salidas hechas'} con pescadores a bordo</span>
               </div>
             )}
+            {boat.links.length > 0 && <div className="mt-3"><SocialLinks links={boat.links} /></div>}
           </div>
 
           <div className="grid grid-cols-3 gap-2 text-center">
@@ -426,6 +449,19 @@ export function BoatProfile() {
           </div>
 
           <p className="wrap-anywhere whitespace-pre-line text-sm leading-relaxed">{boat.description}</p>
+
+          {equipment.length > 0 && (
+            <section>
+              <h3 className="mb-2.5 text-base font-bold">A bordo</h3>
+              <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                {equipment.map((t) => (
+                  <li key={t} className="flex min-w-0 items-center gap-2 rounded-xl border border-line bg-white px-3 py-2.5 text-[13px] font-semibold">
+                    <Check size={15} className="shrink-0 text-ok" /> <span className="truncate">{t}</span>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
 
           <div className="rounded-2xl border border-line bg-white p-4 text-[13px]">
             <p className="mb-2 flex items-center gap-2 font-semibold"><ShieldCheck size={16} className="text-sea" /> Declarado por el propietario</p>

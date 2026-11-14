@@ -32,6 +32,9 @@ export interface Boat {
   licenseDeclared: boolean
   bookMaxDays: number // se puede reservar desde X días antes
   bookMinHours: number // las reservas se cierran X horas antes
+  links: string[] // redes del barco (Instagram, TikTok, web…), siempre https
+  equipment: string[] // lo que hay a bordo (sonda, vivero…)
+  createdAt: string
 }
 
 export interface Outing {

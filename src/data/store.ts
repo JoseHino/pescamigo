@@ -94,6 +94,7 @@ const toBoat = (r: any): Boat => ({
   portId: r.port_id, description: r.description, photos: r.photos ?? [],
   insuranceDeclared: r.insurance_declared, licenseDeclared: r.license_declared,
   bookMaxDays: r.book_max_days, bookMinHours: r.book_min_hours,
+  links: r.links ?? [], equipment: r.equipment ?? [], createdAt: r.created_at ?? '',
 })
 const hm = (t: string) => String(t).slice(0, 5)
 const toOuting = (r: any): Outing => ({
@@ -372,7 +373,7 @@ export function markNoticesRead(userId: string) {
 
 /* ---------- propietario: barcos ---------- */
 
-export async function saveBoat(id: string | null, d: Omit<Boat, 'id' | 'ownerId'>): Promise<{ error?: string; id?: string }> {
+export async function saveBoat(id: string | null, d: Omit<Boat, 'id' | 'ownerId' | 'createdAt'>): Promise<{ error?: string; id?: string }> {
   const me = state.me
   if (!me) return { error: GENERIC }
   let photos: string[]
@@ -384,12 +385,19 @@ export async function saveBoat(id: string | null, d: Omit<Boat, 'id' | 'ownerId'
   const row = {
     name: d.name, model: d.model, length_m: d.lengthM, capacity: d.capacity, port_id: d.portId,
     description: d.description, photos, insurance_declared: d.insuranceDeclared, license_declared: d.licenseDeclared,
-    book_max_days: d.bookMaxDays, book_min_hours: d.bookMinHours,
+    book_max_days: d.bookMaxDays, book_min_hours: d.bookMinHours, links: d.links, equipment: d.equipment,
   }
+  const before = id ? state.boats.find((b) => b.id === id)?.photos ?? [] : []
   const res = id
     ? await supabase.from('boats').update(row).eq('id', id).select('id').single()
     : await supabase.from('boats').insert(row).select('id').single()
   if (res.error) return { error: dbError(res.error) ?? GENERIC }
+  // Las fotos que se han quitado se borran también del almacenamiento (solo las de la carpeta propia).
+  const removed = before
+    .filter((u) => !photos.includes(u))
+    .map((u) => u.split('/storage/v1/object/public/photos/')[1])
+    .filter((p): p is string => !!p && p.startsWith(`${me.id}/`))
+  if (removed.length) void supabase.storage.from('photos').remove(removed).then(() => undefined)
   await refresh()
   return { id: res.data.id }
 }

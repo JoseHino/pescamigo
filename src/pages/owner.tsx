@@ -5,7 +5,7 @@ import {
   Settings2, Wallet, X,
 } from 'lucide-react'
 import {
-  Button, Chip, Empty, ErrorMsg, Field, Header, Notice, OutingTicket, SectionTitle, SocialLinks, StatusBadge, inputCls,
+  Button, Chip, Empty, ErrorMsg, Field, Header, LinksInput, Notice, OutingTicket, SectionTitle, SocialLinks, StatusBadge, inputCls,
 } from '../components/ui'
 import { NotFound } from './explore'
 import {
@@ -14,7 +14,7 @@ import {
 } from '../data/store'
 import { PORTS, portById } from '../data/seed'
 import {
-  ACTIVE, FISHING_TYPES, WEEKDAYS, addDays, dayLabel, euro, isoDate, longDate, monthLabel, parseMoney, shortDate, toDate,
+  ACTIVE, BOAT_EQUIPMENT, FISHING_TYPES, MAX_BOAT_PHOTOS, WEEKDAYS, addDays, dayLabel, euro, isoDate, longDate, monthLabel, parseMoney, shortDate, toDate,
   weekdayList,
 } from '../lib/format'
 import { fileToDataUrl } from '../lib/image'
@@ -857,23 +857,40 @@ export function BoatEdit() {
     licenseDeclared: boat?.licenseDeclared ?? false,
     bookMaxDays: boat?.bookMaxDays ?? 60,
     bookMinHours: boat?.bookMinHours ?? 12,
+    links: boat?.links ?? ([] as string[]),
+    equipment: boat?.equipment ?? ([] as string[]),
   })
   const [err, setErr] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  const [reading, setReading] = useState(0)
   if (!me) return null
   if (id && id !== 'nuevo' && !boat) return <NotFound what="No encontramos este barco." />
 
-  const addPhoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
+  // Varias fotos a la vez, hasta el máximo; se reducen a 1600 px para que se vean bien a pantalla completa.
+  const addPhotos = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? [])
     e.target.value = ''
-    if (!file) return
-    try {
-      const url = await fileToDataUrl(file)
-      setF((x) => ({ ...x, photos: [...x.photos, url] }))
-    } catch {
-      setErr('No se ha podido leer la imagen. Prueba con otra.')
+    if (!files.length) return
+    const room = MAX_BOAT_PHOTOS - f.photos.length
+    const take = files.slice(0, Math.max(0, room))
+    setErr(files.length > room ? `Caben ${MAX_BOAT_PHOTOS} fotos como máximo: se ${take.length === 1 ? 'ha añadido 1' : `han añadido ${take.length}`}.` : null)
+    setReading(take.length)
+    const urls: string[] = []
+    let failed = 0
+    for (const file of take) {
+      try {
+        urls.push(await fileToDataUrl(file, 1600))
+      } catch {
+        failed++
+      }
+      setReading((n) => n - 1)
     }
+    if (failed) setErr(`No se ${failed === 1 ? 'ha podido leer 1 imagen' : `han podido leer ${failed} imágenes`}. Prueba con otras.`)
+    setF((x) => ({ ...x, photos: [...x.photos, ...urls].slice(0, MAX_BOAT_PHOTOS) }))
   }
+  const makeCover = (i: number) => setF((x) => ({ ...x, photos: [x.photos[i], ...x.photos.filter((_, j) => j !== i)] }))
+  const toggleEquipment = (t: string) =>
+    setF((x) => ({ ...x, equipment: x.equipment.includes(t) ? x.equipment.filter((y) => y !== t) : [...x.equipment, t] }))
   const submit = async (e: FormEvent) => {
     e.preventDefault()
     if (busy) return
@@ -894,22 +911,38 @@ export function BoatEdit() {
       <form onSubmit={submit} className="flex min-h-0 flex-1 flex-col">
         <div className="col flex-1 space-y-4 overflow-y-auto p-4 lg:py-6">
           <div>
-            <p className="mb-1.5 text-[13px] font-semibold">Fotos</p>
-            <div className="flex gap-2 overflow-x-auto [scrollbar-width:none]">
+            <div className="mb-1.5 flex items-baseline justify-between gap-2">
+              <p className="text-[13px] font-semibold">Fotos</p>
+              <span className="tnum text-xs text-ink-soft">{f.photos.length} de {MAX_BOAT_PHOTOS}</span>
+            </div>
+            <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
               {f.photos.map((src, i) => (
-                <div key={i} className="relative shrink-0">
-                  <img src={src} alt={`Foto ${i + 1}`} className="h-24 w-28 rounded-xl object-cover" />
-                  <button type="button" aria-label={`Quitar foto ${i + 1}`} onClick={() => setF({ ...f, photos: f.photos.filter((_, j) => j !== i) })}
-                    className="absolute right-1 top-1 grid h-6 w-6 place-items-center rounded-full bg-white shadow">
+                <div key={i} className="relative aspect-[4/3] overflow-hidden rounded-xl bg-sea-50">
+                  <img src={src} alt={`Foto ${i + 1}`} className="h-full w-full object-cover" />
+                  {i === 0 ? (
+                    <span className="absolute bottom-1.5 left-1.5 rounded-full bg-ink/85 px-2 py-0.5 text-[10px] font-semibold text-white">Portada</span>
+                  ) : (
+                    <button type="button" onClick={() => makeCover(i)} className="absolute bottom-1.5 left-1.5 rounded-full bg-white/95 px-2 py-0.5 text-[10px] font-semibold text-ink shadow">
+                      Hacer portada
+                    </button>
+                  )}
+                  <button type="button" aria-label={`Quitar foto ${i + 1}`} onClick={() => setF((x) => ({ ...x, photos: x.photos.filter((_, j) => j !== i) }))}
+                    className="absolute right-1.5 top-1.5 grid h-6 w-6 place-items-center rounded-full bg-white shadow">
                     <X size={13} />
                   </button>
                 </div>
               ))}
-              <label className="grid h-24 w-28 shrink-0 cursor-pointer place-items-center rounded-xl border border-dashed border-line bg-white text-sea">
-                <span className="flex flex-col items-center gap-1 text-xs font-semibold"><Camera size={18} /> Añadir</span>
-                <input type="file" accept="image/*" className="sr-only" onChange={addPhoto} />
-              </label>
+              {reading > 0 && Array.from({ length: reading }, (_, i) => (
+                <div key={`r${i}`} className="aspect-[4/3] animate-pulse rounded-xl bg-sea-50" aria-hidden="true" />
+              ))}
+              {f.photos.length + reading < MAX_BOAT_PHOTOS && (
+                <label className="grid aspect-[4/3] cursor-pointer place-items-center rounded-xl border border-dashed border-line bg-white text-sea">
+                  <span className="flex flex-col items-center gap-1 text-xs font-semibold"><Camera size={18} /> Añadir fotos</span>
+                  <input type="file" accept="image/*" multiple className="sr-only" onChange={addPhotos} />
+                </label>
+              )}
             </div>
+            <p className="mt-1.5 text-xs text-ink-soft">Puedes elegir varias a la vez. La primera es la portada.</p>
           </div>
           <Field label="Nombre del barco">
             <input className={inputCls} maxLength={60} value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} />
@@ -935,6 +968,18 @@ export function BoatEdit() {
           <Field label="Descripción">
             <textarea className={`${inputCls} min-h-24 resize-none`} maxLength={1000} value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })} placeholder="Cómo son tus salidas, qué material llevas, qué esperas de quien venga." />
           </Field>
+          <div>
+            <p className="mb-1.5 text-[13px] font-semibold">A bordo</p>
+            <div className="flex flex-wrap gap-2">
+              {BOAT_EQUIPMENT.map((t) => <Chip key={t} active={f.equipment.includes(t)} onClick={() => toggleEquipment(t)}>{t}</Chip>)}
+            </div>
+            <p className="mt-1.5 text-xs text-ink-soft">Marca lo que hay en el barco para que el pescador sepa qué llevar.</p>
+          </div>
+          <div>
+            <p className="mb-1.5 text-[13px] font-semibold">Redes del barco</p>
+            <LinksInput links={f.links} onChange={(next) => setF((x) => ({ ...x, links: next }))} placeholder="instagram.com/tu_barco" />
+            <p className="mt-1.5 text-xs text-ink-soft">Instagram, TikTok, YouTube o tu web. Se verán en la ficha del barco.</p>
+          </div>
           <div className="grid grid-cols-2 gap-3">
             <Field label="Se puede reservar desde">
               <select className={inputCls} value={f.bookMaxDays} onChange={(e) => setF({ ...f, bookMaxDays: Number(e.target.value) })}>
@@ -961,7 +1006,7 @@ export function BoatEdit() {
           <ErrorMsg>{err}</ErrorMsg>
         </div>
         <div className="col border-t border-line bg-white p-4">
-          <Button full type="submit" disabled={busy}>{busy ? 'Guardando…' : 'Guardar barco'}</Button>
+          <Button full type="submit" disabled={busy || reading > 0}>{busy ? 'Guardando…' : reading > 0 ? 'Preparando fotos…' : 'Guardar barco'}</Button>
         </div>
       </form>
     </div>

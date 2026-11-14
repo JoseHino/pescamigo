@@ -13,6 +13,11 @@ export function ownerLevel(trips: number): OwnerLevel | null {
 }
 export const LEVEL_LABEL: Record<OwnerLevel, string> = { habitual: 'Patrón habitual', super: 'Superpatrón' }
 
+/* ---------- ficha del barco ---------- */
+
+export const MAX_BOAT_PHOTOS = 20
+export const BOAT_EQUIPMENT = ['Sonda', 'GPS / plotter', 'Vivero', 'Cañas para prestar', 'Cebo y señuelos', 'Nevera', 'Toldo', 'Baño']
+
 /* ---------- enlaces del perfil (Instagram, TikTok…) ---------- */
 
 export const MAX_LINKS = 5

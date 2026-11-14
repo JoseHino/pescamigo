@@ -1,10 +1,10 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Anchor, Bell, ChevronRight, ExternalLink, Fish, LayoutDashboard, LogOut, Smartphone, X } from 'lucide-react'
-import { Button, Chip, Empty, ErrorMsg, Header, OwnerBadge, inputCls } from '../components/ui'
+import { Anchor, Bell, ChevronRight, Fish, LayoutDashboard, LogOut, Pencil, Plus, Smartphone } from 'lucide-react'
+import { Button, Chip, Empty, ErrorMsg, Header, LinksInput, OwnerBadge } from '../components/ui'
 import { markNoticesRead, myBoats, saveLinks, setNotifyEmail, signOut, updatePrefs, useAppState, useMe } from '../data/store'
-import { PORTS } from '../data/seed'
-import { FISHING_TYPES, HABITUAL_MIN, MAX_LINKS, SUPER_MIN, ago, linkLabel, normalizeLink } from '../lib/format'
+import { PORTS, portById } from '../data/seed'
+import { FISHING_TYPES, HABITUAL_MIN, SUPER_MIN, ago } from '../lib/format'
 import { disablePush, enablePush, pushState, type PushState } from '../lib/push'
 
 export function Alerts() {
@@ -125,57 +125,13 @@ function OwnerLevelCard({ ownerId }: { ownerId: string }) {
 
 /** Enlaces del pescador a sus redes: los ven los patrones junto a su nombre. */
 function LinksEditor({ links }: { links: string[] }) {
-  const [value, setValue] = useState('')
-  const [busy, setBusy] = useState(false)
-  const [err, setErr] = useState<string | null>(null)
-  const save = async (next: string[]) => {
-    setBusy(true)
-    setErr(null)
-    const e = await saveLinks(next)
-    setBusy(false)
-    if (e) setErr(e)
-    return !e
-  }
-  const add = async (e: FormEvent) => {
-    e.preventDefault()
-    if (busy) return
-    const url = normalizeLink(value)
-    if (!url) return setErr('Ese enlace no parece válido. Cópialo de tu perfil, por ejemplo instagram.com/tu_usuario.')
-    if (links.includes(url)) return setErr('Ya tienes ese enlace.')
-    if (await save([...links, url])) setValue('')
-  }
   return (
     <section className="space-y-3 rounded-2xl border border-line bg-white p-4">
       <div>
         <h2 className="text-sm font-bold">Tus redes</h2>
         <p className="text-xs text-ink-soft">Enlaces a tu Instagram, TikTok o YouTube. Son públicos: los patrones los verán junto a tu nombre cuando pidas plaza.</p>
       </div>
-      {links.length > 0 && (
-        <ul className="space-y-2">
-          {links.map((l) => (
-            <li key={l} className="flex items-center gap-2 rounded-xl border border-line px-3 py-2">
-              <a href={l} target="_blank" rel="noopener noreferrer nofollow" className="flex min-w-0 flex-1 items-center gap-1.5 text-sm font-semibold text-sea-dark">
-                <span className="truncate">{linkLabel(l)}</span>
-                <ExternalLink size={13} className="shrink-0" />
-              </a>
-              <button type="button" disabled={busy} onClick={() => save(links.filter((x) => x !== l))} aria-label={`Quitar ${linkLabel(l)}`}
-                className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-ink-soft hover:bg-foam disabled:opacity-50">
-                <X size={16} />
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
-      {links.length < MAX_LINKS ? (
-        <form onSubmit={add} className="flex gap-2">
-          <input className={`${inputCls} py-2.5 text-sm`} type="text" inputMode="url" autoCapitalize="none" autoCorrect="off" spellCheck={false}
-            value={value} onChange={(e) => setValue(e.target.value)} placeholder="instagram.com/tu_usuario" aria-label="Enlace a tu red social" />
-          <Button type="submit" variant="outline" disabled={busy || !value.trim()} className="shrink-0">Añadir</Button>
-        </form>
-      ) : (
-        <p className="text-xs text-ink-soft">Has llegado al máximo de {MAX_LINKS} enlaces.</p>
-      )}
-      <ErrorMsg>{err}</ErrorMsg>
+      <LinksInput links={links} onChange={saveLinks} />
     </section>
   )
 }
@@ -215,14 +171,38 @@ export function Profile() {
         {me.role === 'fisher' && <LinksEditor links={me.links} />}
 
         {me.role === 'owner' && (
-          <Link to="/panel" className="flex items-center gap-3 rounded-2xl border border-line bg-white p-4">
-            <LayoutDashboard size={20} className="shrink-0 text-sea" />
-            <span className="min-w-0 flex-1">
-              <span className="block text-sm font-bold">{boats.length ? `Mis barcos (${boats.length})` : 'Da de alta tu barco'}</span>
-              <span className="block truncate text-xs text-ink-soft">Barcos, salidas, solicitudes e ingresos en el panel</span>
-            </span>
-            <ChevronRight size={18} className="shrink-0 text-ink-soft" />
-          </Link>
+          <section className="space-y-3 rounded-2xl border border-line bg-white p-4">
+            <div>
+              <h2 className="text-sm font-bold">{boats.length > 1 ? 'Las fichas de tus barcos' : 'La ficha de tu barco'}</h2>
+              <p className="text-xs text-ink-soft">Es lo que ven los pescadores: fotos, redes, lo que hay a bordo, valoraciones y tus próximas salidas.</p>
+            </div>
+            {boats.length > 0 ? (
+              <ul className="space-y-2">
+                {boats.map((b) => (
+                  <li key={b.id} className="flex items-center gap-3 rounded-xl border border-line p-2.5">
+                    <Link to={`/barco/${b.id}`} className="flex min-w-0 flex-1 items-center gap-3">
+                      <img src={b.photos[0]} alt="" className="h-12 w-12 shrink-0 rounded-lg bg-sea-50 object-cover" />
+                      <span className="min-w-0">
+                        <span className="block truncate text-sm font-bold">{b.name}</span>
+                        <span className="block truncate text-xs text-ink-soft">{b.photos.length} {b.photos.length === 1 ? 'foto' : 'fotos'} · {portById(b.portId).name}</span>
+                      </span>
+                    </Link>
+                    <Link to={`/barco-editar/${b.id}`} className="flex shrink-0 items-center gap-1 rounded-lg px-2 py-1.5 text-[13px] font-semibold text-sea hover:bg-sea-50">
+                      <Pencil size={14} /> Editar
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <Link to="/barco-editar/nuevo" className="flex items-center gap-1 text-[13px] font-semibold text-sea">
+                <Plus size={14} /> {boats.length ? 'Añadir otro barco' : 'Da de alta tu barco'}
+              </Link>
+              <Link to="/panel" className="flex items-center gap-1 text-[13px] font-semibold text-ink-soft">
+                <LayoutDashboard size={14} /> Ir al panel <ChevronRight size={14} />
+              </Link>
+            </div>
+          </section>
         )}
         {me.role === 'owner' && <OwnerLevelCard ownerId={me.id} />}
 

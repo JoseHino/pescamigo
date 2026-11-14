@@ -1,10 +1,12 @@
-import type { ButtonHTMLAttributes, ReactNode } from 'react'
+import { useEffect, useRef, useState, type ButtonHTMLAttributes, type ReactNode } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { ArrowLeft, ArrowRight, Award, Banknote, Bell, Crown, ExternalLink, MapPin, Repeat, Star, Users } from 'lucide-react'
+import {
+  ArrowLeft, ArrowRight, Award, Banknote, Bell, ChevronLeft, ChevronRight, Crown, ExternalLink, MapPin, Repeat, Star, Users, X,
+} from 'lucide-react'
 import type { BookingStatus, Outing } from '../types'
 import { boatRating, seatsLeft, useAppState } from '../data/store'
 import { portById } from '../data/seed'
-import { LEVEL_LABEL, STATUS, dayLabel, duration, euro, linkLabel, ownerLevel } from '../lib/format'
+import { LEVEL_LABEL, MAX_LINKS, STATUS, dayLabel, duration, euro, linkLabel, normalizeLink, ownerLevel } from '../lib/format'
 
 export const inputCls =
   'w-full min-w-0 rounded-xl border border-line bg-white px-3.5 py-3 text-[15px] text-ink placeholder:text-ink-soft/60 focus:border-sea focus:outline-none focus:ring-2 focus:ring-sea/20 disabled:bg-foam disabled:text-ink-soft'
@@ -123,6 +125,117 @@ export function SocialLinks({ links }: { links: string[] }) {
           <ExternalLink size={12} className="shrink-0" />
         </a>
       ))}
+    </div>
+  )
+}
+
+/** Lista de enlaces editable (redes del pescador o del barco). onChange puede devolver un mensaje de error. */
+export function LinksInput({ links, onChange, placeholder = 'instagram.com/tu_usuario' }: {
+  links: string[]
+  onChange: (next: string[]) => Promise<string | null> | string | null | void
+  placeholder?: string
+}) {
+  const [value, setValue] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState<string | null>(null)
+  const apply = async (next: string[]) => {
+    setBusy(true)
+    setErr(null)
+    const e = await onChange(next)
+    setBusy(false)
+    if (e) setErr(e)
+    return !e
+  }
+  const add = async () => {
+    if (busy) return
+    const url = normalizeLink(value)
+    if (!url) return setErr('Ese enlace no parece válido. Cópialo del perfil, por ejemplo instagram.com/tu_usuario.')
+    if (links.includes(url)) return setErr('Ese enlace ya está.')
+    if (await apply([...links, url])) setValue('')
+  }
+  return (
+    <div className="space-y-2">
+      {links.length > 0 && (
+        <ul className="space-y-2">
+          {links.map((l) => (
+            <li key={l} className="flex items-center gap-2 rounded-xl border border-line bg-white px-3 py-2">
+              <a href={l} target="_blank" rel="noopener noreferrer nofollow" className="flex min-w-0 flex-1 items-center gap-1.5 text-sm font-semibold text-sea-dark">
+                <span className="truncate">{linkLabel(l)}</span>
+                <ExternalLink size={13} className="shrink-0" />
+              </a>
+              <button type="button" disabled={busy} onClick={() => apply(links.filter((x) => x !== l))} aria-label={`Quitar ${linkLabel(l)}`}
+                className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-ink-soft hover:bg-foam disabled:opacity-50">
+                <X size={16} />
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      {links.length < MAX_LINKS ? (
+        <div className="flex gap-2">
+          <input className={`${inputCls} py-2.5 text-sm`} type="text" inputMode="url" autoCapitalize="none" autoCorrect="off" spellCheck={false}
+            value={value} onChange={(e) => setValue(e.target.value)} placeholder={placeholder} aria-label="Enlace a una red social o web"
+            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); void add() } }} />
+          <Button type="button" variant="outline" disabled={busy || !value.trim()} onClick={() => void add()} className="shrink-0">Añadir</Button>
+        </div>
+      ) : (
+        <p className="text-xs text-ink-soft">Has llegado al máximo de {MAX_LINKS} enlaces.</p>
+      )}
+      <ErrorMsg>{err}</ErrorMsg>
+    </div>
+  )
+}
+
+/** Fotos a pantalla completa: flechas, teclado y deslizar con el dedo. */
+export function PhotoViewer({ photos, start, alt, onClose }: { photos: string[]; start: number; alt: string; onClose: () => void }) {
+  const [i, setI] = useState(start)
+  const n = photos.length
+  const touchX = useRef<number | null>(null)
+  const close = useRef(onClose)
+  close.current = onClose
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') close.current()
+      else if (e.key === 'ArrowRight') setI((x) => (x + 1) % n)
+      else if (e.key === 'ArrowLeft') setI((x) => (x - 1 + n) % n)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [n])
+  const go = (d: number) => setI((x) => (x + d + n) % n)
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={`Fotos de ${alt}`}
+      className="fixed inset-0 z-[2000] flex flex-col bg-black/95 text-white"
+      onTouchStart={(e) => { touchX.current = e.touches[0].clientX }}
+      onTouchEnd={(e) => {
+        if (touchX.current === null) return
+        const dx = e.changedTouches[0].clientX - touchX.current
+        touchX.current = null
+        if (Math.abs(dx) > 40) go(dx < 0 ? 1 : -1)
+      }}
+    >
+      <div className="flex h-14 shrink-0 items-center justify-between px-3">
+        <span className="tnum pl-2 text-sm font-semibold">{i + 1} / {n}</span>
+        <button type="button" onClick={onClose} aria-label="Cerrar" className="grid h-10 w-10 place-items-center rounded-full hover:bg-white/10">
+          <X size={22} />
+        </button>
+      </div>
+      <div className="relative flex min-h-0 flex-1 items-center justify-center px-2 pb-6 sm:px-16">
+        <img src={photos[i]} alt={`Foto ${i + 1} de ${alt}`} className="max-h-full max-w-full rounded-lg object-contain" />
+        {n > 1 && (
+          <>
+            <button type="button" onClick={() => go(-1)} aria-label="Foto anterior" className="absolute left-2 top-1/2 grid h-11 w-11 -translate-y-1/2 place-items-center rounded-full bg-white/10 hover:bg-white/20">
+              <ChevronLeft size={22} />
+            </button>
+            <button type="button" onClick={() => go(1)} aria-label="Foto siguiente" className="absolute right-2 top-1/2 grid h-11 w-11 -translate-y-1/2 place-items-center rounded-full bg-white/10 hover:bg-white/20">
+              <ChevronRight size={22} />
+            </button>
+          </>
+        )}
+      </div>
     </div>
   )
 }
