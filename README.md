@@ -39,12 +39,22 @@ npm run dev
 | Mapa | Puerto base, no posición en directo | `src/components/MapView.tsx` |
 | Roles | Uno por cuenta | `src/main.tsx` |
 | Seguro y titulación | Declarados por el propietario, sin comprobar | `src/pages/owner.tsx` |
-| Correo al registrarse | No se verifica con un mensaje de confirmación | función `signup` de Supabase |
+| Correo al registrarse | Se verifica con un código de 6 cifras **cuando haya servicio de envío** (ver abajo); mientras tanto la cuenta se confirma sola | función `signup` de Supabase |
 
 ## Pendiente
 
 - Acceso con Google (`GOOGLE_ENABLED` en `src/lib/supabase.ts`): falta crear las credenciales en Google Cloud y activarlas en Supabase.
 - Cobro de la comisión con tarjeta: falta una cuenta de Stripe.
 - Avisos push con la app cerrada: hoy los avisos se ven dentro de la app.
-- Recuperar contraseña olvidada y verificación del correo: necesitan un servicio de envío de correo.
+- Recuperar contraseña olvidada: necesita el servicio de envío de correo.
 - Dominio pescamigo.es, proveedor de mapas para producción, textos legales y empaquetado para las tiendas.
+
+## Activar la verificación del correo
+
+La app y el servidor ya están preparados. Solo falta el servicio que envía los mensajes (Resend):
+
+1. Crear una cuenta en resend.com y añadir el dominio `pescamigo.es`.
+2. Poner en el DNS de Hostinger los registros que indique Resend y esperar a que el dominio salga como verificado.
+3. Crear una clave de API en Resend y guardarla en Supabase → Edge Functions → Secrets con el nombre `RESEND_API_KEY`.
+
+Desde ese momento, cada cuenta nueva recibe un código de 6 cifras (caduca en 15 minutos, 5 intentos) y no puede entrar hasta escribirlo. Las cuentas creadas antes siguen funcionando. El remitente es `Pescamigo <no-reply@pescamigo.es>`; se cambia con el secreto `MAIL_FROM`.

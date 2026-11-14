@@ -2,7 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { Anchor, Fish } from 'lucide-react'
 import { Button, ErrorMsg, Field, Header, inputCls } from '../components/ui'
-import { setRole, signIn, signInGoogle, signUp } from '../data/store'
+import { NEEDS_CODE, resendCode, setRole, signIn, signInGoogle, signUp, verifyEmail } from '../data/store'
 import { GOOGLE_ENABLED } from '../lib/supabase'
 import type { Role } from '../types'
 
@@ -59,6 +59,9 @@ export function Auth() {
   const [f, setF] = useState({ name: '', username: '', email: '', password: '' })
   const [err, setErr] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  const [codeStep, setCodeStep] = useState(false)
+  const [code, setCode] = useState('')
+  const [info, setInfo] = useState<string | null>(null)
   const on = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement>) => setF({ ...f, [k]: e.target.value })
 
   const submit = async (e: FormEvent) => {
@@ -68,10 +71,62 @@ export function Auth() {
     setErr(null)
     const error = register ? await signUp(f) : await signIn(f.email, f.password)
     setBusy(false)
+    if (error === NEEDS_CODE) {
+      setCode('')
+      setInfo(null)
+      return setCodeStep(true)
+    }
     // Si todo va bien no hay que navegar: al iniciarse la sesión la app pasa sola a la pantalla siguiente.
     setErr(error)
   }
+  const verify = async (e: FormEvent) => {
+    e.preventDefault()
+    if (busy) return
+    setBusy(true)
+    setErr(null)
+    setInfo(null)
+    setErr(await verifyEmail(f.email, code, f.password))
+    setBusy(false)
+  }
+  const resend = async () => {
+    setErr(null)
+    setInfo(null)
+    const error = await resendCode(f.email)
+    if (error) setErr(error)
+    else setInfo('Te hemos enviado un código nuevo.')
+  }
   const google = async () => setErr(await signInGoogle())
+
+  if (codeStep) {
+    return (
+      <div className="flex h-full flex-col bg-foam">
+        <Header title="Verifica tu correo" />
+        <form onSubmit={verify} className="col-narrow flex-1 space-y-4 overflow-y-auto px-5 py-6 lg:py-12">
+          <p className="text-sm leading-relaxed">
+            Hemos enviado un código de 6 cifras a <b className="break-all">{f.email.trim().toLowerCase()}</b>. Escríbelo aquí para terminar.
+          </p>
+          <Field label="Código de verificación" hint="Si no lo ves en unos minutos, mira en la carpeta de correo no deseado.">
+            <input
+              className={`${inputCls} tnum text-center text-2xl font-bold tracking-[0.4em]`}
+              value={code}
+              onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              placeholder="000000"
+              autoFocus
+            />
+          </Field>
+          <ErrorMsg>{err}</ErrorMsg>
+          {info && <p role="status" className="rounded-xl bg-ok-50 px-3.5 py-2.5 text-[13px] font-medium text-ok">{info}</p>}
+          <Button full type="submit" disabled={busy || code.length !== 6}>{busy ? 'Verificando…' : 'Verificar correo'}</Button>
+          <div className="flex items-center justify-between text-sm">
+            <button type="button" onClick={resend} className="font-semibold text-sea">Enviar otro código</button>
+            <button type="button" onClick={() => { setCodeStep(false); setErr(null) }} className="font-semibold text-ink-soft">Cambiar el correo</button>
+          </div>
+        </form>
+      </div>
+    )
+  }
 
   return (
     <div className="flex h-full flex-col bg-foam">

@@ -152,6 +152,23 @@ document.addEventListener('visibilitychange', () => {
 
 /* ---------- sesión ---------- */
 
+/** Resultado especial: la cuenta existe pero falta escribir el código enviado al correo. */
+export const NEEDS_CODE = '__verificar__'
+
+async function callSignup(body: Record<string, unknown>): Promise<{ ok: boolean; data: any }> {
+  try {
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/signup`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', apikey: SUPABASE_KEY },
+      body: JSON.stringify(body),
+    })
+    return { ok: res.ok, data: await res.json().catch(() => ({})) }
+  } catch {
+    return { ok: false, data: {} }
+  }
+}
+const fnError = (data: any) => (typeof data?.error === 'string' ? data.error : GENERIC)
+
 export async function signUp(d: { name: string; username: string; email: string; password: string }): Promise<string | null> {
   const email = d.email.trim().toLowerCase()
   const username = d.username.trim().toLowerCase()
@@ -159,25 +176,35 @@ export async function signUp(d: { name: string; username: string; email: string;
   if (!/^[a-z0-9._-]{3,20}$/.test(username)) return 'El nombre de usuario debe tener entre 3 y 20 letras, números, puntos o guiones.'
   if (!/^\S+@\S+\.\S+$/.test(email)) return 'Ese correo no parece válido.'
   if (d.password.length < 8) return 'La contraseña debe tener al menos 8 caracteres.'
-  try {
-    const res = await fetch(`${SUPABASE_URL}/functions/v1/signup`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', apikey: SUPABASE_KEY },
-      body: JSON.stringify({ name: d.name.trim(), username, email, password: d.password }),
-    })
-    const body = await res.json().catch(() => ({}))
-    if (!res.ok) return typeof body.error === 'string' ? body.error : GENERIC
-  } catch {
-    return GENERIC
-  }
+  const { ok, data } = await callSignup({ action: 'signup', name: d.name.trim(), username, email, password: d.password })
+  if (!ok) return fnError(data)
+  if (data.verify) return NEEDS_CODE
   return signIn(email, d.password)
 }
 
 export async function signIn(email: string, password: string): Promise<string | null> {
-  const { data, error } = await supabase.auth.signInWithPassword({ email: email.trim().toLowerCase(), password })
-  if (error) return error.status === 400 ? 'El correo o la contraseña no son correctos.' : GENERIC
+  const mail = email.trim().toLowerCase()
+  const { data, error } = await supabase.auth.signInWithPassword({ email: mail, password })
+  if (error) {
+    if (error.code === 'email_not_confirmed') {
+      void resendCode(mail) // se manda un código nuevo por si el anterior ya caducó
+      return NEEDS_CODE
+    }
+    return error.status === 400 ? 'El correo o la contraseña no son correctos.' : GENERIC
+  }
   await loadSession(data.session)
   return state.me ? null : GENERIC
+}
+
+export async function verifyEmail(email: string, code: string, password: string): Promise<string | null> {
+  const { ok, data } = await callSignup({ action: 'verify', email: email.trim().toLowerCase(), code })
+  if (!ok) return fnError(data)
+  return signIn(email, password)
+}
+
+export async function resendCode(email: string): Promise<string | null> {
+  const { ok, data } = await callSignup({ action: 'resend', email: email.trim().toLowerCase() })
+  return ok ? null : fnError(data)
 }
 
 export async function signInGoogle(): Promise<string | null> {
