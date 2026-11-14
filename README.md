@@ -2,7 +2,7 @@
 
 App móvil que conecta propietarios de barco que salen a pescar con pescadores sin barco.
 
-Publicada en https://josehino.github.io/pescamigo/
+Publicada en https://pescamigo.es
 
 ## Cómo funciona
 
