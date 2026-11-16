@@ -156,6 +156,14 @@ function NeedsRole() {
   return <RoleSetup />
 }
 
+// Safari (iPhone) ignora a veces la prohibición de zoom: se cortan aquí los gestos de pellizco (el doble toque ya lo impide touch-action),
+// salvo dentro del mapa, que tiene su propio zoom.
+const inMap = (t: EventTarget | null) => t instanceof Element && !!t.closest('.leaflet-container')
+for (const ev of ['gesturestart', 'gesturechange', 'gestureend']) {
+  document.addEventListener(ev, (e) => { if (!inMap(e.target)) e.preventDefault() }, { passive: false })
+}
+document.addEventListener('touchmove', (e) => { if (e.touches.length > 1 && !inMap(e.target)) e.preventDefault() }, { passive: false })
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <HashRouter>

@@ -19,8 +19,23 @@
 }
 
 html, body, #root { height: 100%; }
+/* Que se comporte como una app: sin zoom con los dedos ni doble toque, sin "rebote" de la página
+   y sin que el texto cambie de tamaño al girar el móvil. El mapa (Leaflet) gestiona su propio zoom. */
+html, body {
+  touch-action: pan-x pan-y;
+  overscroll-behavior: none;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+button, a, label, input, select, textarea { touch-action: manipulation; }
+.leaflet-container, .leaflet-container * { touch-action: none; }
+/* En móviles, las casillas de texto con letra de menos de 16 px hacen que el iPhone amplíe la pantalla al tocarlas. */
+@media (pointer: coarse) {
+  input, select, textarea { font-size: 16px !important; }
+}
 body {
   margin: 0;
+  -webkit-tap-highlight-color: transparent;
   background: #DDE7F0;
   color: var(--color-ink);
   font-family: var(--font-sans);
