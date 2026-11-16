@@ -184,15 +184,10 @@ export function LinksInput({ links, onChange, placeholder = 'instagram.com/tu_us
   )
 }
 
-/** Foto entera, sin recortar, sea del tamaño que sea: lo que sobra del hueco se rellena con la misma foto desenfocada.
- *  El tamaño y el redondeo los pone quien la usa (className). */
-export function FitPhoto({ src, alt = '', className = '', eager = false }: { src: string; alt?: string; className?: string; eager?: boolean }) {
-  return (
-    <span className={`relative block overflow-hidden bg-sea-50 ${className}`}>
-      <img src={src} alt="" aria-hidden="true" loading={eager ? 'eager' : 'lazy'} className="absolute inset-0 h-full w-full scale-110 object-cover opacity-60 blur-xl" />
-      <img src={src} alt={alt} loading={eager ? 'eager' : 'lazy'} className="relative h-full w-full object-contain" />
-    </span>
-  )
+/** Foto con su propia forma: el recuadro se ajusta a la foto (vertical, panorámica, cuadrada…), sin recortes ni relleno.
+ *  Quien la usa solo pone los límites (max-h-…, max-w-…) y el redondeo; ancho y alto salen de la propia foto. */
+export function Photo({ src, alt = '', className = '', eager = false }: { src: string; alt?: string; className?: string; eager?: boolean }) {
+  return <img src={src} alt={alt} loading={eager ? 'eager' : 'lazy'} className={`block h-auto w-auto ${className}`} />
 }
 
 /** Fotos a pantalla completa: flechas, teclado y deslizar con el dedo. */

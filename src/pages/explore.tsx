@@ -5,7 +5,7 @@ import {
 } from 'lucide-react'
 import MapView from '../components/MapView'
 import {
-  Button, Chip, Empty, FitPhoto, Header, OutingTicket, OwnerBadge, PhotoViewer, Rating, SectionTitle, SocialLinks, Stars, StatusBadge,
+  Button, Chip, Empty, Header, OutingTicket, OwnerBadge, Photo, PhotoViewer, Rating, SectionTitle, SocialLinks, Stars, StatusBadge,
 } from '../components/ui'
 import {
   boatRating, bookingWindow, canBook, conversationFor, fisherOutings, myActiveBooking, seatsLeft, upcomingOutings, useAppState, useMe,
@@ -50,7 +50,7 @@ export function MapPage() {
             <X size={16} />
           </button>
           <Link to={`/barco/${boat.id}`} className="flex gap-3">
-            <FitPhoto src={boat.photos[0]} className="h-20 w-24 shrink-0 rounded-xl" />
+            <Photo src={boat.photos[0]} className="max-h-20 max-w-[7.5rem] shrink-0 self-center rounded-xl" />
             <div className="min-w-0 flex-1 pr-7">
               <p className="flex min-w-0 items-center gap-1.5">
                 <span className="truncate text-base font-bold">{boat.name}</span>
@@ -311,7 +311,9 @@ export function OutingDetail() {
     <div className="flex h-full flex-col">
       <Header title={longDate(o.date)} back />
       <div className="flex-1 overflow-y-auto">
-        <FitPhoto src={boat.photos[0]} eager className="h-56 w-full lg:mx-auto lg:mt-6 lg:h-80 lg:max-w-[42rem] lg:rounded-2xl" />
+        <div className="col p-4 pb-0 lg:pt-6">
+          <Photo src={boat.photos[0]} eager className="mx-auto max-h-[45vh] max-w-full rounded-2xl lg:max-h-80" />
+        </div>
         <div className="col space-y-4 p-4">
           <div>
             <div className="flex flex-wrap items-center gap-2">
@@ -347,7 +349,7 @@ export function OutingDetail() {
           )}
 
           <Link to={`/barco/${boat.id}`} className="flex items-center gap-3 rounded-2xl border border-line bg-white p-3">
-            <FitPhoto src={boat.photos[boat.photos.length > 1 ? 1 : 0]} className="h-14 w-14 shrink-0 rounded-xl" />
+            <Photo src={boat.photos[boat.photos.length > 1 ? 1 : 0]} className="max-h-14 max-w-20 shrink-0 rounded-xl" />
             <div className="min-w-0 flex-1">
               <p className="flex min-w-0 items-center gap-1.5">
                 <span className="truncate text-[15px] font-bold">{boat.name}</span>
@@ -435,16 +437,17 @@ export function BoatProfile() {
     <div className="flex h-full flex-col">
       <Header title={boat.name} back />
       <div className="flex-1 overflow-y-auto pb-6">
-        <div className="col flex snap-x snap-mandatory gap-2 overflow-x-auto p-4 pb-0 [scrollbar-width:none] lg:pt-6">
+        {/* Cada foto con su forma: el recuadro es la propia foto (todas a la misma altura salvo las muy panorámicas). */}
+        <div className={`col flex snap-x snap-mandatory items-center gap-2 overflow-x-auto p-4 pb-0 [scrollbar-width:none] lg:pt-6 ${gallery.length === 1 ? 'justify-center' : ''}`}>
           {gallery.map((src, i) => (
             <button
               key={i}
               type="button"
               onClick={() => setViewer(i)}
               aria-label={`Ver la foto ${i + 1} de ${gallery.length} a pantalla completa`}
-              className={`shrink-0 snap-center overflow-hidden rounded-2xl ${gallery.length === 1 ? 'w-full' : 'w-[82%] lg:w-[70%]'}`}
+              className="shrink-0 snap-center overflow-hidden rounded-2xl"
             >
-              <FitPhoto src={src} alt={`Foto ${i + 1} de ${boat.name}`} eager={i === 0} className="h-56 w-full lg:h-80" />
+              <Photo src={src} alt={`Foto ${i + 1} de ${boat.name}`} eager className="max-h-64 max-w-[85vw] lg:max-h-80 lg:max-w-[36rem]" />
             </button>
           ))}
         </div>
@@ -547,7 +550,7 @@ export function BoatProfile() {
                       {x.outingDay ? `Salida verificada · ${shortDate(x.outingDay)}` : 'Salida verificada'}
                     </p>
                     <p className="wrap-anywhere mt-2 text-sm leading-relaxed">{x.comment}</p>
-                    {x.photo && <FitPhoto src={x.photo} alt="Foto de la salida" className="mt-3 h-48 w-full rounded-xl" />}
+                    {x.photo && <Photo src={x.photo} alt="Foto de la salida" className="mt-3 max-h-80 max-w-full rounded-xl" />}
                   </li>
                 ))}
               </ul>

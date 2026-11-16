@@ -5,7 +5,7 @@ import {
   Settings2, Wallet, X,
 } from 'lucide-react'
 import {
-  Button, Chip, Empty, ErrorMsg, Field, FitPhoto, Header, LinksInput, Notice, OutingTicket, SectionTitle, SocialLinks, StatusBadge, inputCls,
+  Button, Chip, Empty, ErrorMsg, Field, Header, LinksInput, Notice, OutingTicket, Photo, SectionTitle, SocialLinks, StatusBadge, inputCls,
 } from '../components/ui'
 import { NotFound } from './explore'
 import {
@@ -242,7 +242,7 @@ export function Panel() {
             {boats.map((b) => (
               <li key={b.id}>
                 <Link to={`/barco-editar/${b.id}`} className="flex items-center gap-3 rounded-2xl border border-line bg-white p-3">
-                  <FitPhoto src={b.photos[0]} className="h-12 w-12 shrink-0 rounded-xl" />
+                  <Photo src={b.photos[0]} className="max-h-12 max-w-16 shrink-0 rounded-xl" />
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-sm font-bold">{b.name}</span>
                     <span className="block truncate text-xs text-ink-soft">{portById(b.portId).name} · {b.capacity} plazas</span>
@@ -915,28 +915,31 @@ export function BoatEdit() {
               <p className="text-[13px] font-semibold">Fotos</p>
               <span className="tnum text-xs text-ink-soft">{f.photos.length} de {MAX_BOAT_PHOTOS}</span>
             </div>
-            <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+            {/* Cada foto con su forma; debajo, si es la portada o el botón para hacerla portada. */}
+            <div className="flex flex-wrap items-start gap-x-2 gap-y-3">
               {f.photos.map((src, i) => (
-                <div key={i} className="relative aspect-[4/3] overflow-hidden rounded-xl bg-sea-50">
-                  <FitPhoto src={src} alt={`Foto ${i + 1}`} eager className="h-full w-full" />
+                <div key={i} className="flex flex-col items-start gap-1">
+                  <div className="relative">
+                    <Photo src={src} alt={`Foto ${i + 1}`} eager className="max-h-28 max-w-[11rem] rounded-xl" />
+                    <button type="button" aria-label={`Quitar foto ${i + 1}`} onClick={() => setF((x) => ({ ...x, photos: x.photos.filter((_, j) => j !== i) }))}
+                      className="absolute right-1.5 top-1.5 grid h-6 w-6 place-items-center rounded-full bg-white shadow">
+                      <X size={13} />
+                    </button>
+                  </div>
                   {i === 0 ? (
-                    <span className="absolute bottom-1.5 left-1.5 rounded-full bg-ink/85 px-2 py-0.5 text-[10px] font-semibold text-white">Portada</span>
+                    <span className="rounded-full bg-ink px-2 py-0.5 text-[11px] font-semibold text-white">Portada</span>
                   ) : (
-                    <button type="button" onClick={() => makeCover(i)} className="absolute bottom-1.5 left-1.5 rounded-full bg-white/95 px-2 py-0.5 text-[10px] font-semibold text-ink shadow">
+                    <button type="button" onClick={() => makeCover(i)} className="px-0.5 text-[11px] font-semibold text-sea hover:underline">
                       Hacer portada
                     </button>
                   )}
-                  <button type="button" aria-label={`Quitar foto ${i + 1}`} onClick={() => setF((x) => ({ ...x, photos: x.photos.filter((_, j) => j !== i) }))}
-                    className="absolute right-1.5 top-1.5 grid h-6 w-6 place-items-center rounded-full bg-white shadow">
-                    <X size={13} />
-                  </button>
                 </div>
               ))}
               {reading > 0 && Array.from({ length: reading }, (_, i) => (
-                <div key={`r${i}`} className="aspect-[4/3] animate-pulse rounded-xl bg-sea-50" aria-hidden="true" />
+                <div key={`r${i}`} className="h-28 w-36 animate-pulse rounded-xl bg-sea-50" aria-hidden="true" />
               ))}
               {f.photos.length + reading < MAX_BOAT_PHOTOS && (
-                <label className="grid aspect-[4/3] cursor-pointer place-items-center rounded-xl border border-dashed border-line bg-white text-sea">
+                <label className="grid h-28 w-32 cursor-pointer place-items-center rounded-xl border border-dashed border-line bg-white text-sea">
                   <span className="flex flex-col items-center gap-1 text-xs font-semibold"><Camera size={18} /> Añadir fotos</span>
                   <input type="file" accept="image/*" multiple className="sr-only" onChange={addPhotos} />
                 </label>
