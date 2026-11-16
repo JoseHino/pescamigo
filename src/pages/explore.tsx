@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import {
   BadgeCheck, Banknote, LocateFixed, LocateOff, CalendarX, Check, ChevronLeft, ChevronRight, Clock, Images, MapPin, MessageCircle, Repeat, Ruler, ShieldCheck, Users, X,
 } from 'lucide-react'
-import MapView from '../components/MapView'
+import MapView, { type MapStyle } from '../components/MapView'
 import {
   Avatar, Button, Chip, Empty, ErrorMsg, Header, OutingTicket, OwnerBadge, Photo, PhotoViewer, Rating, SectionTitle, Stars, StatusBadge,
 } from '../components/ui'
@@ -21,6 +21,14 @@ export function MapPage() {
   const s = useAppState()
   const me = useMe()
   const [sel, setSel] = useState<string | null>(null)
+  // Satélite o Profundidad: se recuerda en este móvil
+  const [mapStyle, setMapStyle] = useState<MapStyle>(() => {
+    try { return localStorage.getItem('pescamigo-mapa') === 'profundidad' ? 'profundidad' : 'satelite' } catch { return 'satelite' }
+  })
+  const pickStyle = (v: MapStyle) => {
+    setMapStyle(v)
+    try { localStorage.setItem('pescamigo-mapa', v) } catch { /* sin almacenamiento */ }
+  }
   // Al pescador solo le cuentan las salidas en las que puede pedir plaza.
   const upcoming = me?.role === 'fisher' ? fisherOutings(s, me.id) : upcomingOutings(s)
   const items = useMemo(
@@ -40,7 +48,13 @@ export function MapPage() {
 
   return (
     <div className="relative h-full">
-      <MapView items={items} selectedId={sel} onSelect={setSel} />
+      <MapView items={items} selectedId={sel} onSelect={setSel} style={mapStyle} />
+      <div className="absolute right-3 top-[92px] z-[500] grid overflow-hidden rounded-xl bg-white text-[13px] font-semibold shadow-md" role="group" aria-label="Tipo de mapa">
+        {([['satelite', 'Satélite'], ['profundidad', 'Profundidad']] as const).map(([v, label]) => (
+          <button key={v} type="button" aria-pressed={mapStyle === v} onClick={() => pickStyle(v)}
+            className={`px-3 py-2 ${mapStyle === v ? 'bg-ink text-white' : 'text-ink hover:bg-foam'}`}>{label}</button>
+        ))}
+      </div>
       <div className="pointer-events-none absolute inset-x-0 top-0 z-[500] p-3">
         <div className="pointer-events-auto inline-flex items-center gap-2 rounded-full bg-white px-3.5 py-2 text-[13px] font-semibold shadow-md">
           <span className="h-2.5 w-2.5 rounded-full bg-buoy" /> Con salida publicada

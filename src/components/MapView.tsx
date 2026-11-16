@@ -31,20 +31,32 @@ function pin(active: boolean, hasOuting: boolean, [dx, dy]: [number, number] = [
 
 export interface MapBoat { boat: Boat; hasOuting: boolean }
 
-export default function MapView({ items, selectedId, onSelect }: { items: MapBoat[]; selectedId: string | null; onSelect: (id: string | null) => void }) {
+// Capas del fondo del mapa (datos públicos y gratuitos):
+//  - Satélite: ortofoto PNOA del Instituto Geográfico Nacional + líneas de profundidad de EMODnet.
+//  - Profundidad: batimetría de EMODnet (Unión Europea) en tonos azules con el relieve del fondo + líneas.
+export type MapStyle = 'satelite' | 'profundidad'
+const PNOA = 'https://www.ign.es/wmts/pnoa-ma?request=GetTile&service=WMTS&version=1.0.0&layer=OI.OrthoimageCoverage&style=default&format=image/jpeg&tilematrixset=GoogleMapsCompatible&tilematrix={z}&tilerow={y}&tilecol={x}'
+const EMOD = 'https://ows.emodnet-bathymetry.eu/wms'
+const ATTR = 'Ortofoto &copy; <a href="https://www.ign.es">IGN PNOA</a> · Batimetría &copy; <a href="https://emodnet.ec.europa.eu">EMODnet</a>'
+function baseLayers(style: MapStyle): L.Layer[] {
+  const contours = L.tileLayer.wms(EMOD, { layers: 'emodnet:contours', format: 'image/png', transparent: true, version: '1.3.0', attribution: ATTR } as L.WMSOptions)
+  if (style === 'profundidad') {
+    return [L.tileLayer.wms(EMOD, { layers: 'emodnet:mean_atlas_land', format: 'image/png', transparent: true, version: '1.3.0', attribution: ATTR } as L.WMSOptions), contours]
+  }
+  return [L.tileLayer(PNOA, { maxZoom: 19, attribution: ATTR }), contours]
+}
+
+export default function MapView({ items, selectedId, onSelect, style = 'satelite' }: { items: MapBoat[]; selectedId: string | null; onSelect: (id: string | null) => void; style?: MapStyle }) {
   const el = useRef<HTMLDivElement>(null)
   const map = useRef<L.Map | null>(null)
   const layer = useRef<L.LayerGroup | null>(null)
+  const base = useRef<L.LayerGroup | null>(null)
   const fitted = useRef(false)
 
   useEffect(() => {
     if (!el.current || map.current) return
-    const m = L.map(el.current, { zoomControl: false, attributionControl: true }).setView([36.5, -4.85], 10)
-    // Teselas públicas de OpenStreetMap: válidas para la demo; en producción hay que contratar un proveedor de mapas.
-    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 18,
-      attribution: '&copy; colaboradores de OpenStreetMap',
-    }).addTo(m)
+    const m = L.map(el.current, { zoomControl: false, attributionControl: true, maxZoom: 18 }).setView([36.5, -4.85], 10)
+    base.current = L.layerGroup().addTo(m)
     L.control.zoom({ position: 'topright' }).addTo(m)
     m.on('click', () => onSelect(null))
     layer.current = L.layerGroup().addTo(m)
@@ -55,6 +67,14 @@ export default function MapView({ items, selectedId, onSelect }: { items: MapBoa
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // Fondo del mapa: se cambia sin rehacer el mapa
+  useEffect(() => {
+    const g = base.current
+    if (!g) return
+    g.clearLayers()
+    for (const l of baseLayers(style)) g.addLayer(l)
+  }, [style])
 
   useEffect(() => {
     const m = map.current
