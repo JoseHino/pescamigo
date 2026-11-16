@@ -34,11 +34,11 @@ export function PriceBreakdown({ total, pct, card }: { total: number; pct: numbe
         <b className="tnum shrink-0">{euro(total)}</b>
       </div>
       <div className="flex justify-between gap-3 text-ink-soft">
-        <span>Comisión de Pescamigo ({String(pct).replace('.', ',')} %)</span>
+        <span>Gestión de la plataforma Pescamigo ({String(pct).replace('.', ',')} %)</span>
         <span className="tnum shrink-0">{euro(commission)}</span>
       </div>
       <div className="flex justify-between gap-3 text-ink-soft">
-        <span>Recibe el patrón</span>
+        <span>Para el patrón (gastos compartidos de la salida)</span>
         <span className="tnum shrink-0">{euro(total - commission)}</span>
       </div>
     </div>

@@ -302,7 +302,7 @@ export function Profile() {
           <FileText size={20} className="shrink-0 text-sea" />
           <span className="min-w-0 flex-1">
             <span className="block text-sm font-bold">Condiciones y garantía</span>
-            <span className="block truncate text-xs text-ink-soft">Cómo funcionan los pagos, la comisión y las devoluciones</span>
+            <span className="block truncate text-xs text-ink-soft">Cómo funcionan los pagos y las devoluciones</span>
           </span>
           <ChevronRight size={18} className="shrink-0 text-ink-soft" />
         </Link>

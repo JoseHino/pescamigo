@@ -54,7 +54,8 @@ export function Terms() {
           <h1 className="text-2xl font-extrabold tracking-tight">Así funciona Pescamigo</h1>
           <p className="mt-1.5 text-sm text-ink-soft">
             Pescamigo pone en contacto a patrones que salen a pescar con su barco y a pescadores que quieren acompañarles.
-            Son salidas privadas en las que se comparten los gastos, no un servicio profesional de alquiler de barcos.
+            Son salidas privadas en las que se comparten los gastos (combustible, cebo, mantenimiento…): ni el patrón ni el
+            pescador ganan dinero con ellas. No es un servicio profesional de alquiler de barcos.
           </p>
         </div>
 
@@ -78,16 +79,17 @@ export function Terms() {
           </ul>
         </Section>
 
-        <Section icon={<HandCoins size={19} />} title="Precio y comisión">
+        <Section icon={<HandCoins size={19} />} title="Precio y gestión de la plataforma">
           <p>
-            El precio por plaza que ves es lo que pagas: no hay gastos añadidos. De ese importe, Pescamigo se queda un {fmtPct(pct)} % por
-            el servicio (pago seguro, garantía de devolución y atención) y el patrón recibe el {fmtPct(100 - pct)} %.
+            El precio por plaza que ves es lo que pagas: no hay gastos añadidos. De ese importe, el {fmtPct(100 - pct)} % es para el patrón,
+            como reparto de los gastos de la salida, y el {fmtPct(pct)} % es para Pescamigo por la gestión de la plataforma: la app,
+            el pago seguro, la garantía de devolución y la atención. Pescamigo es la única parte que cobra por su trabajo.
           </p>
           <p className="text-ink-soft">
             Ejemplo: en una plaza de 30 €, el patrón recibe {(30 * (100 - pct) / 100).toFixed(2).replace('.', ',')} € y Pescamigo {(30 * pct / 100).toFixed(2).replace('.', ',')} €.
           </p>
           <p className="text-ink-soft">
-            En los barcos que todavía no cobran con tarjeta, el reparto de gastos se paga en efectivo al patrón el día de la salida y no hay comisión.
+            En los barcos que todavía no cobran con tarjeta, el reparto de gastos se paga en efectivo al patrón el día de la salida y Pescamigo no cobra nada.
           </p>
         </Section>
 
@@ -118,7 +120,7 @@ export function Terms() {
 
         <Section icon={<Star size={19} />} title="Para patrones">
           <ul>
-            <li>Recibes el {fmtPct(100 - pct)} % del precio de cada plaza en tu cuenta bancaria, después de cada salida.</li>
+            <li>Recibes el {fmtPct(100 - pct)} % del precio de cada plaza en tu cuenta bancaria después de cada salida, como reparto de los gastos. Pon un precio que cubra tus gastos, no una tarifa con beneficio.</li>
             <li>Para cobrar con tarjeta, completa tu cuenta de cobro desde tu perfil. Es un alta segura con Stripe que se hace una sola vez.</li>
             <li>Si cancelas una salida, devolvemos el dinero a los pescadores y esa salida no se cobra.</li>
           </ul>

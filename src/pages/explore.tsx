@@ -374,7 +374,7 @@ export function OutingDetail() {
             </div>
             <p className="mt-2 text-xs text-ink-soft">
               {card
-                ? `Precio final, sin gastos añadidos. Incluye la comisión de Pescamigo (${String(commissionPct).replace('.', ',')} %). Pedir plaza es gratis.`
+                ? `Precio final, sin gastos añadidos. Incluye la gestión de la plataforma Pescamigo (${String(commissionPct).replace('.', ',')} %). Pedir plaza es gratis.`
                 : 'Solicitar plaza en Pescamigo es gratis.'}
             </p>
           </div>

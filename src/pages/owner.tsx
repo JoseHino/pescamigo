@@ -108,7 +108,7 @@ function RequestCard({ b }: { b: Booking }) {
       </Link>
       {b.message && <p className="wrap-anywhere whitespace-pre-line rounded-xl border border-line px-3 py-2 text-[13px]">«{b.message}»</p>}
       {b.commissionAmount > 0 && (
-        <p className="text-xs text-ink-soft">Recibirás {euro(b.ownerAmount)} (comisión de Pescamigo: {euro(b.commissionAmount)}).</p>
+        <p className="text-xs text-ink-soft">Recibirás {euro(b.ownerAmount)} (gestión de la plataforma Pescamigo: {euro(b.commissionAmount)}).</p>
       )}
       <RequestActions b={b} />
     </article>
@@ -792,7 +792,7 @@ export function Income() {
       <div className="col flex-1 space-y-5 overflow-y-auto p-4 lg:py-6">
         {!paymentsEnabled && (
           <p className="rounded-2xl bg-sea-50 p-4 text-[13px] text-sea-dark">
-            Ahora mismo el reparto de gastos se paga en efectivo, directamente entre pescador y patrón, y Pescamigo no cobra comisión.
+            Ahora mismo el reparto de gastos se paga en efectivo, directamente entre pescador y patrón, y Pescamigo no cobra nada.
             Cuando se activen los pagos con tarjeta, el pescador pagará en la app, Pescamigo se quedará el {String(commissionPct).replace('.', ',')} % y
             tú recibirás el resto en tu cuenta después de cada salida.
           </p>
@@ -800,7 +800,7 @@ export function Income() {
         <div className="grid grid-cols-3 gap-2">
           {[
             { l: 'Reparto total', v: sum('amountTotal') },
-            { l: 'Comisión', v: sum('commissionAmount') },
+            { l: 'Plataforma', v: sum('commissionAmount') },
             { l: 'Para ti', v: sum('ownerAmount') },
           ].map((t) => (
             <div key={t.l} className="min-w-0 rounded-2xl border border-line bg-white p-3">
@@ -819,7 +819,7 @@ export function Income() {
                   <p className="truncate text-sm font-bold">{shortDate(o.date)} · {boat?.name}</p>
                   <p className="truncate text-[13px] text-ink-soft">{userName(s, b.fisherId)} · {b.seats} {b.seats === 1 ? 'plaza' : 'plazas'}</p>
                   <p className="text-xs text-ink-soft">
-                    {b.paymentMethod === 'cash' ? 'Efectivo, sin comisión'
+                    {b.paymentMethod === 'cash' ? 'Efectivo, sin gastos de plataforma'
                       : b.payoutStatus === 'paid' ? 'Transferido a tu cuenta'
                       : b.paymentStatus === 'paid' ? 'Pagado con tarjeta: lo recibes después de la salida'
                       : 'Pendiente de que el pescador pague'}
