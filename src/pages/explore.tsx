@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import {
-  BadgeCheck, Banknote, LocateFixed, LocateOff, CalendarX, Check, ChevronLeft, ChevronRight, Clock, Images, MapPin, MessageCircle, Repeat, Ruler, ShieldCheck, Users, X,
+  BadgeCheck, Banknote, LocateFixed, LocateOff, Navigation, CalendarX, Check, ChevronLeft, ChevronRight, Clock, Images, MapPin, MessageCircle, Repeat, Ruler, ShieldCheck, Users, X,
 } from 'lucide-react'
 import MapView, { type MapStyle } from '../components/MapView'
 import {
@@ -116,6 +116,31 @@ export function MapPage() {
           </div>
         </div>
       )}
+    </div>
+  )
+}
+
+/** Dónde está el barco: puerto, pantalán y botón "Cómo llegar" (Google Maps). */
+function BerthInfo({ boat, portId }: { boat: Boat; portId?: string }) {
+  const sameport = !portId || portId === boat.portId
+  const port = portById(portId ?? boat.portId)
+  const lat = sameport ? boat.berthLat : null
+  const lng = sameport ? boat.berthLng : null
+  const dest = lat != null && lng != null ? `${lat},${lng}` : `${port.lat},${port.lng}`
+  return (
+    <div className="space-y-3 rounded-2xl border border-line bg-white p-4">
+      <p className="text-xs font-semibold uppercase tracking-wide text-ink-soft">Dónde está el barco</p>
+      <div className="flex items-start gap-3">
+        <MapPin size={20} className="mt-0.5 shrink-0 text-sea" />
+        <div className="min-w-0">
+          <p className="text-[15px] font-bold">{port.name}</p>
+          <p className="text-[13px] text-ink-soft">{sameport && boat.berth ? boat.berth : port.town}</p>
+        </div>
+      </div>
+      <a href={`https://www.google.com/maps/dir/?api=1&destination=${dest}`} target="_blank" rel="noopener noreferrer"
+        className="flex w-full items-center justify-center gap-2 rounded-xl bg-sea px-4 py-3 text-[15px] font-semibold text-white hover:bg-sea-dark">
+        <Navigation size={18} /> Cómo llegar
+      </a>
     </div>
   )
 }
@@ -482,6 +507,8 @@ export function OutingDetail() {
             </p>
           </div>
 
+          <BerthInfo boat={boat} portId={o.portId} />
+
           {me.role === 'fisher' && <Guarantee card={card} />}
         </div>
       </div>
@@ -605,6 +632,8 @@ export function BoatProfile() {
           </div>
 
           <p className="wrap-anywhere whitespace-pre-line text-sm leading-relaxed">{boat.description}</p>
+
+          <BerthInfo boat={boat} />
 
           {equipment.length > 0 && (
             <section>

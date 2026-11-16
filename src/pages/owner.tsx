@@ -8,6 +8,7 @@ import {
   Avatar, Button, Chip, Empty, ErrorMsg, Field, Header, Notice, OutingTicket, Photo, SectionTitle, StatusBadge, inputCls,
 } from '../components/ui'
 import { NotFound } from './explore'
+import { BerthPicker } from '../components/MapView'
 import { OwnerTripRequests } from './requests'
 import {
   cancelOuting, conversationFor, createRule, deleteRule, isPast, myBoats, publishOuting, respondBooking, saveBoat, seatsLeft,
@@ -877,6 +878,9 @@ export function BoatEdit() {
     bookMinHours: boat?.bookMinHours ?? 12,
     links: boat?.links ?? ([] as string[]),
     equipment: boat?.equipment ?? ([] as string[]),
+    berth: boat?.berth ?? '',
+    berthLat: boat?.berthLat ?? null as number | null,
+    berthLng: boat?.berthLng ?? null as number | null,
   })
   const [err, setErr] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
@@ -981,11 +985,23 @@ export function BoatEdit() {
               </select>
             </Field>
           </div>
-          <Field label="Puerto base" hint="Es donde aparece tu barco en el mapa.">
+          <Field label="Puerto base" hint="El puerto donde está amarrado tu barco."> 
             <select className={inputCls} value={f.portId} onChange={(e) => setF({ ...f, portId: e.target.value })}>
               {PORTS.map((p) => <option key={p.id} value={p.id}>{p.name} ({p.town})</option>)}
             </select>
           </Field>
+          <div className="space-y-2 rounded-2xl border border-line bg-white p-4">
+            <p className="text-[13px] font-semibold">¿Dónde está exactamente?</p>
+            <Field label="Pantalán y amarre" hint="Así los pescadores saben llegar sin problemas.">
+              <input className={inputCls} maxLength={80} value={f.berth} onChange={(e) => setF({ ...f, berth: e.target.value })} placeholder="Por ejemplo: Pantalán 3, amarre 45" />
+            </Field>
+            <p className="text-[13px] text-ink-soft">Toca en la foto el sitio exacto del barco (puedes arrastrar la chincheta para afinar). Ahí aparecerá en el mapa.</p>
+            <BerthPicker lat={f.berthLat} lng={f.berthLng} center={[portById(f.portId).lat, portById(f.portId).lng]}
+              onChange={(lat, lng) => setF((x) => ({ ...x, berthLat: lat, berthLng: lng }))} />
+            {f.berthLat != null && (
+              <button type="button" onClick={() => setF((x) => ({ ...x, berthLat: null, berthLng: null }))} className="text-[13px] font-semibold text-ink-soft">Quitar el punto</button>
+            )}
+          </div>
           <Field label="Descripción">
             <textarea className={`${inputCls} min-h-24 resize-none`} maxLength={1000} value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })} placeholder="Cómo son tus salidas, qué material llevas, qué esperas de quien venga." />
           </Field>

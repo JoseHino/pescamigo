@@ -7,7 +7,7 @@ import { LIVE_MAX_AGE } from '../lib/live'
 const boatSvg =
   '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v11H5z"/><path d="M14.5 7v7H19z"/><path d="M3 17h18l-2.5 4h-13z"/></svg>'
 
-// Varios barcos del mismo puerto se colocan en anillo alrededor del puerto, separados en píxeles
+// Varios barcos del mismo puerto sin pantalán marcado se colocan en anillo alrededor del puerto, separados en píxeles
 // para que no se tapen sea cual sea el zoom.
 function ringOffset(n: number): [number, number] {
   if (n === 0) return [0, 0]
@@ -38,7 +38,7 @@ export type MapStyle = 'satelite' | 'profundidad'
 const PNOA = 'https://www.ign.es/wmts/pnoa-ma?request=GetTile&service=WMTS&version=1.0.0&layer=OI.OrthoimageCoverage&style=default&format=image/jpeg&tilematrixset=GoogleMapsCompatible&tilematrix={z}&tilerow={y}&tilecol={x}'
 const EMOD = 'https://ows.emodnet-bathymetry.eu/wms'
 const ATTR = 'Ortofoto &copy; <a href="https://www.ign.es">IGN PNOA</a> · Batimetría &copy; <a href="https://emodnet.ec.europa.eu">EMODnet</a>'
-function baseLayers(style: MapStyle): L.Layer[] {
+export function baseLayers(style: MapStyle): L.Layer[] {
   const contours = L.tileLayer.wms(EMOD, { layers: 'emodnet:contours', format: 'image/png', transparent: true, version: '1.3.0', attribution: ATTR } as L.WMSOptions)
   if (style === 'profundidad') {
     return [L.tileLayer.wms(EMOD, { layers: 'emodnet:mean_atlas_land', format: 'image/png', transparent: true, version: '1.3.0', attribution: ATTR } as L.WMSOptions), contours]
@@ -87,9 +87,11 @@ export default function MapView({ items, selectedId, onSelect, style = 'satelite
       const port = portById(boat.portId)
       // Posición en directo si el patrón la comparte (y es reciente); si no, el puerto base.
       const live = !!boat.live && Date.now() - new Date(boat.live.at).getTime() < LIVE_MAX_AGE
-      const n = live ? 0 : perPort.get(port.id) ?? 0
-      if (!live) perPort.set(port.id, n + 1)
-      const pos: L.LatLngExpression = live ? [boat.live!.lat, boat.live!.lng] : [port.lat, port.lng]
+      // En directo > su pantalán exacto > el puerto (varios barcos sin pantalán se reparten en anillo)
+      const berth = !live && boat.berthLat != null && boat.berthLng != null
+      const n = live || berth ? 0 : perPort.get(port.id) ?? 0
+      if (!live && !berth) perPort.set(port.id, n + 1)
+      const pos: L.LatLngExpression = live ? [boat.live!.lat, boat.live!.lng] : berth ? [boat.berthLat!, boat.berthLng!] : [port.lat, port.lng]
       pts.push(pos)
       L.marker(pos, { icon: pin(boat.id === selectedId, hasOuting, ringOffset(n), live), title: live ? `${boat.name} (en directo)` : boat.name, keyboard: true, zIndexOffset: boat.id === selectedId ? 1000 : 0 })
         .on('click', (e) => {
@@ -106,4 +108,46 @@ export default function MapView({ items, selectedId, onSelect, style = 'satelite
   }, [items, selectedId])
 
   return <div ref={el} className="h-full w-full" />
+}
+
+/** Selector del punto exacto del amarre: se toca el mapa o se arrastra la chincheta. Fondo de foto aérea. */
+export function BerthPicker({ lat, lng, center, onChange }: {
+  lat: number | null
+  lng: number | null
+  center: [number, number]
+  onChange: (lat: number, lng: number) => void
+}) {
+  const el = useRef<HTMLDivElement>(null)
+  const map = useRef<L.Map | null>(null)
+  const marker = useRef<L.Marker | null>(null)
+  const cb = useRef(onChange)
+  cb.current = onChange
+  useEffect(() => {
+    if (!el.current || map.current) return
+    const start: [number, number] = lat != null && lng != null ? [lat, lng] : center
+    const m = L.map(el.current, { zoomControl: true, attributionControl: false, maxZoom: 19 }).setView(start, lat != null ? 18 : 16)
+    for (const l of baseLayers('satelite')) l.addTo(m)
+    const icon = pin(true, false)
+    const place = (p: L.LatLng) => {
+      if (!marker.current) {
+        marker.current = L.marker(p, { icon, draggable: true }).addTo(m)
+        marker.current.on('dragend', () => { const q = marker.current!.getLatLng(); cb.current(q.lat, q.lng) })
+      } else marker.current.setLatLng(p)
+      cb.current(p.lat, p.lng)
+    }
+    if (lat != null && lng != null) {
+      marker.current = L.marker([lat, lng], { icon, draggable: true }).addTo(m)
+      marker.current.on('dragend', () => { const q = marker.current!.getLatLng(); cb.current(q.lat, q.lng) })
+    }
+    m.on('click', (e: L.LeafletMouseEvent) => place(e.latlng))
+    map.current = m
+    return () => { m.remove(); map.current = null; marker.current = null }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+  // Si cambia el puerto y no hay punto marcado, se centra en el nuevo puerto
+  useEffect(() => {
+    if (map.current && lat == null) map.current.setView(center, 16)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [center[0], center[1]])
+  return <div ref={el} className="h-64 w-full overflow-hidden rounded-2xl border border-line" />
 }

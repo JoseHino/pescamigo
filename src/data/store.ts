@@ -105,6 +105,7 @@ const toBoat = (r: any): Boat => ({
   insuranceDeclared: r.insurance_declared, licenseDeclared: r.license_declared,
   bookMaxDays: r.book_max_days, bookMinHours: r.book_min_hours,
   links: r.links ?? [], equipment: r.equipment ?? [], createdAt: r.created_at ?? '',
+  berth: r.berth ?? '', berthLat: r.berth_lat ?? null, berthLng: r.berth_lng ?? null,
   live: r.live_at && r.live_lat != null ? { lat: Number(r.live_lat), lng: Number(r.live_lng), at: r.live_at } : null,
 })
 const hm = (t: string) => String(t).slice(0, 5)
@@ -422,7 +423,7 @@ export async function saveBoat(id: string | null, d: Omit<Boat, 'id' | 'ownerId'
   const row = {
     name: d.name, model: d.model, length_m: d.lengthM, capacity: d.capacity, port_id: d.portId,
     description: d.description, photos, insurance_declared: d.insuranceDeclared, license_declared: d.licenseDeclared,
-    book_max_days: d.bookMaxDays, book_min_hours: d.bookMinHours, links: d.links, equipment: d.equipment,
+    book_max_days: d.bookMaxDays, book_min_hours: d.bookMinHours, links: d.links, equipment: d.equipment, berth: d.berth.trim(), berth_lat: d.berthLat, berth_lng: d.berthLng,
   }
   const before = id ? state.boats.find((b) => b.id === id)?.photos ?? [] : []
   const res = id
