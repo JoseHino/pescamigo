@@ -260,9 +260,13 @@ export function Trips() {
   const upcoming = (x: { o: Outing }) => !isPast(x.o)
   const pending = mine.filter((x) => (x.b.status === 'pending' || x.b.status === 'accepted') && upcoming(x)).sort(byDate)
   const confirmed = mine.filter((x) => x.b.status === 'confirmed' && upcoming(x)).sort(byDate)
-  const history = mine
-    .filter((x) => !pending.includes(x) && !confirmed.includes(x))
-    .sort((a, z) => byDate(z, a))
+  // Pasadas = solo salidas que ya han terminado. Las canceladas/rechazadas de salidas que aún no han pasado se quedan
+  // en Próximas, salvo que ya haya otra reserva activa en esa misma salida (entonces la antigua no se muestra).
+  const history = mine.filter((x) => !upcoming(x)).sort((a, z) => byDate(z, a))
+  const activeOutings = new Set([...pending, ...confirmed].map((x) => x.o.id))
+  const closedUpcoming = mine
+    .filter((x) => upcoming(x) && (x.b.status === 'cancelled' || x.b.status === 'rejected') && !activeOutings.has(x.o.id))
+    .sort(byDate)
   const active = [...confirmed, ...pending]
   const tab = q.get('ver') === 'pasadas' ? 'pasadas' : 'proximas'
   const hasRequests = !!me && s.tripRequests.some((r) => r.fisherId === me.id && r.status === 'open' && r.day >= addDays(0))
@@ -307,7 +311,13 @@ export function Trips() {
                 {pending.map(({ b, o }) => <OutingTicket key={b.id} outing={o} footer={<TripFooter b={b} o={o} />} />)}
               </section>
             )}
-            {active.length === 0 && !hasRequests && (
+            {closedUpcoming.length > 0 && (
+              <section className="space-y-3">
+                <SectionTitle count={closedUpcoming.length}>Canceladas o rechazadas</SectionTitle>
+                {closedUpcoming.map(({ b, o }) => <OutingTicket key={b.id} outing={o} footer={<TripFooter b={b} o={o} />} />)}
+              </section>
+            )}
+            {active.length === 0 && closedUpcoming.length === 0 && !hasRequests && (
               <Empty icon={<Ticket size={24} />} title="No tienes salidas próximas" text="Cuando pidas plaza en una salida aparecerá aquí con su estado."
                 action={<Link to="/salidas" className="font-semibold text-sea">Ver salidas publicadas</Link>} />
             )}
