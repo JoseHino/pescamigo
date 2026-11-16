@@ -166,7 +166,8 @@ export function OutingsPage() {
     return (!port || o.portId === port) && (!type || o.type === type)
   })
   return (
-    <div className="flex h-full flex-col">
+    // Toda la pantalla se desplaza junta: título y filtros no se quedan fijos y dejan sitio al calendario.
+    <div className="h-full overflow-y-auto">
       <Header title="Salidas publicadas" />
       {/* Filtros como dos desplegables: más fáciles que botones que se salen de la pantalla. */}
       <div className="grid grid-cols-2 gap-2 border-b border-line bg-white px-4 py-3 lg:flex lg:px-6">
@@ -283,7 +284,7 @@ function OutingsCalendar({ list, filtered, day, onDay }: { list: Outing[]; filte
   const next = list.find((o) => o.date > sel)
 
   return (
-    <div className="flex-1 overflow-y-auto p-4 lg:p-6">
+    <div className="p-4 lg:p-6">
       <div className="mx-auto grid max-w-5xl gap-5 lg:grid-cols-[380px_minmax(0,1fr)] lg:items-start lg:gap-6">
         <div className="space-y-3 lg:col-span-2"><HowTo /><RequestTripLink /></div>
         <div className="rounded-2xl border border-line bg-white p-3 sm:p-4 lg:sticky lg:top-0">
