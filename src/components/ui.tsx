@@ -4,7 +4,7 @@ import {
   ArrowLeft, ArrowRight, Award, Banknote, Bell, ChevronLeft, ChevronRight, Crown, MapPin, Repeat, Star, Users, X,
 } from 'lucide-react'
 import type { BookingStatus, Outing } from '../types'
-import { boatRating, seatsLeft, useAppState } from '../data/store'
+import { boatRating, isPast, seatsLeft, useAppState } from '../data/store'
 import { portById } from '../data/seed'
 import { LEVEL_LABEL, STATUS, dayLabel, duration, euro, ownerLevel } from '../lib/format'
 
@@ -288,6 +288,8 @@ export function OutingTicket({ outing, footer, to }: { outing: Outing; footer?: 
       <div className="ticket-cut flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-t border-dashed border-line px-4 py-3 text-[13px]">
         {cancelled ? (
           <span className="font-semibold text-red-700">Salida cancelada</span>
+        ) : isPast(outing) ? (
+          <span className="font-semibold text-ink-soft">Salida realizada</span>
         ) : (
           <>
             <span className={`flex items-center gap-1.5 font-semibold ${left === 0 ? 'text-ink-soft' : 'text-ok'}`}>

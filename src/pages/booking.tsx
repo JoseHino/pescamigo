@@ -10,7 +10,7 @@ import {
 import { Guarantee } from './legal'
 import { MyTripRequests } from './requests'
 import { portById } from '../data/seed'
-import { euro, longDate, shortDate, toDate } from '../lib/format'
+import { addDays, euro, longDate, shortDate, toDate } from '../lib/format'
 import { fileToDataUrl } from '../lib/image'
 import type { Booking, Outing } from '../types'
 
@@ -263,6 +263,9 @@ export function Trips() {
   const history = mine
     .filter((x) => !pending.includes(x) && !confirmed.includes(x))
     .sort((a, z) => byDate(z, a))
+  const active = [...confirmed, ...pending]
+  const tab = q.get('ver') === 'pasadas' ? 'pasadas' : 'proximas'
+  const hasRequests = !!me && s.tripRequests.some((r) => r.fisherId === me.id && r.status === 'open' && r.day >= addDays(0))
 
   return (
     <div className="flex h-full flex-col">
@@ -278,12 +281,20 @@ export function Trips() {
             <button type="button" onClick={() => setQ({}, { replace: true })} className="mt-1 text-xs font-semibold text-ink-soft">Cerrar aviso</button>
           </div>
         )}
-        <div className="mb-7 space-y-7 empty:hidden"><MyTripRequests /></div>
-        {mine.length === 0 ? (
-          <Empty icon={<Ticket size={24} />} title="Todavía no has pedido plaza" text="Cuando solicites plaza en una salida aparecerá aquí con su estado."
-            action={<Link to="/salidas" className="font-semibold text-sea">Ver salidas publicadas</Link>} />
-        ) : (
+        {/* Dos pestañas: lo que está en marcha y lo que ya pasó */}
+        <div role="tablist" aria-label="Mis reservas" className="mb-5 grid grid-cols-2 gap-1 rounded-2xl bg-line/60 p-1">
+          {([['proximas', 'Próximas', active.length], ['pasadas', 'Pasadas', history.length]] as const).map(([v, label, n]) => (
+            <button key={v} type="button" role="tab" aria-selected={tab === v} onClick={() => setQ(v === 'proximas' ? {} : { ver: v }, { replace: true })}
+              className={`flex items-center justify-center gap-2 rounded-xl py-3 text-[15px] font-bold transition ${tab === v ? 'bg-white text-ink shadow-sm' : 'text-ink-soft'}`}>
+              {label}
+              <span className={`tnum rounded-full px-2 text-xs ${tab === v ? 'bg-sea text-white' : 'bg-white/70 text-ink-soft'}`}>{n}</span>
+            </button>
+          ))}
+        </div>
+
+        {tab === 'proximas' ? (
           <div className="space-y-7">
+            <div className="space-y-7 empty:hidden"><MyTripRequests /></div>
             {confirmed.length > 0 && (
               <section className="space-y-3">
                 <SectionTitle count={confirmed.length}>Confirmadas</SectionTitle>
@@ -296,12 +307,18 @@ export function Trips() {
                 {pending.map(({ b, o }) => <OutingTicket key={b.id} outing={o} footer={<TripFooter b={b} o={o} />} />)}
               </section>
             )}
-            {history.length > 0 && (
-              <section className="space-y-3">
-                <SectionTitle>Anteriores, rechazadas y canceladas</SectionTitle>
-                {history.map(({ b, o }) => <OutingTicket key={b.id} outing={o} footer={<TripFooter b={b} o={o} />} />)}
-              </section>
+            {active.length === 0 && !hasRequests && (
+              <Empty icon={<Ticket size={24} />} title="No tienes salidas próximas" text="Cuando pidas plaza en una salida aparecerá aquí con su estado."
+                action={<Link to="/salidas" className="font-semibold text-sea">Ver salidas publicadas</Link>} />
             )}
+          </div>
+        ) : history.length === 0 ? (
+          <Empty icon={<Ticket size={24} />} title="Todavía no tienes salidas pasadas" text="Aquí verás las salidas que ya has hecho, para valorarlas, y las canceladas." />
+        ) : (
+          <div className="space-y-3">
+            {history.map(({ b, o }) => (
+              <div key={b.id} className="opacity-95"><OutingTicket outing={o} footer={<TripFooter b={b} o={o} />} /></div>
+            ))}
           </div>
         )}
       </div>
