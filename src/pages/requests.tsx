@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { BellRing, Megaphone, Minus, Plus, Sailboat, Send } from 'lucide-react'
-import { Button, Chip, ErrorMsg, Field, Header, OutingTicket, SectionTitle, inputCls } from '../components/ui'
+import { Avatar, Button, Chip, ErrorMsg, Field, Header, OutingTicket, SectionTitle, inputCls } from '../components/ui'
 import { closeTripRequest, createTripRequest, myBoats, useAppState, useMe } from '../data/store'
 import { PORTS, portById } from '../data/seed'
 import { FISHING_TYPES, addDays, longDate } from '../lib/format'
@@ -164,10 +164,13 @@ export function OwnerTripRequests() {
             const q = new URLSearchParams({ fecha: r.day, peticion: r.id, barco: boat.id, puerto: port, plazas: String(Math.min(r.seats, boat.capacity)), ...(r.types[0] ? { tipo: r.types[0] } : {}) })
             return (
               <article key={r.id} className="space-y-3 rounded-2xl border border-line bg-white p-4">
-                <div>
+                <div className="flex items-start gap-3">
+                  <Avatar name={fisher?.name ?? '?'} src={fisher?.avatar} size={44} />
+                  <div className="min-w-0">
                   <p className="text-[15px] font-bold">{fisher?.name ?? 'Un pescador'} busca salida</p>
                   <p className="text-[13px] font-semibold text-sea-dark">{longDate(r.day)} · {r.seats} {r.seats === 1 ? 'plaza' : 'plazas'}</p>
                   <p className="text-[13px] text-ink-soft">{portsLabel(r.ports)} · {typesLabel(r.types)}</p>
+                  </div>
                 </div>
                 {r.message && <p className="wrap-anywhere rounded-xl border border-line px-3 py-2 text-[13px]">«{r.message}»</p>}
                 {offered ? (

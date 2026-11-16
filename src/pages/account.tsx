@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { Anchor, Bell, ChevronRight, CreditCard, FileText, Fish, LayoutDashboard, LogOut, Pencil, Plus, Smartphone } from 'lucide-react'
-import { Button, Chip, Empty, ErrorMsg, Header, OwnerBadge, Photo } from '../components/ui'
-import { markNoticesRead, myBoats, payoutAccount, setNotifyEmail, signOut, updatePrefs, useAppState, useMe } from '../data/store'
+import { Anchor, Bell, Camera, ChevronRight, CreditCard, FileText, Fish, LayoutDashboard, LogOut, Pencil, Plus, Smartphone } from 'lucide-react'
+import { Avatar, Button, Chip, Empty, ErrorMsg, Header, OwnerBadge, Photo } from '../components/ui'
+import { fileToDataUrl } from '../lib/image'
+import { markNoticesRead, myBoats, payoutAccount, setAvatar, setNotifyEmail, signOut, updatePrefs, useAppState, useMe } from '../data/store'
 import { PORTS, portById } from '../data/seed'
 import { FISHING_TYPES, HABITUAL_MIN, SUPER_MIN, ago } from '../lib/format'
 import { disablePush, enablePush, pushState, type PushState } from '../lib/push'
@@ -170,6 +171,49 @@ function OwnerLevelCard({ ownerId }: { ownerId: string }) {
   )
 }
 
+/** Foto de perfil del usuario: se pone o cambia tocándola; se puede quitar. */
+function AvatarPicker() {
+  const me = useMe()
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState<string | null>(null)
+  if (!me) return null
+  const pick = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    setBusy(true)
+    setErr(null)
+    try {
+      const problem = await setAvatar(await fileToDataUrl(file, 512))
+      if (problem) setErr(problem)
+    } catch {
+      setErr('No se ha podido leer la imagen. Prueba con otra.')
+    }
+    setBusy(false)
+  }
+  const remove = async () => {
+    if (!window.confirm('¿Quitar tu foto de perfil?')) return
+    setBusy(true)
+    await setAvatar(null)
+    setBusy(false)
+  }
+  return (
+    <div className="flex shrink-0 flex-col items-center gap-1.5">
+      <label className={`relative cursor-pointer ${busy ? 'opacity-60' : ''}`} aria-label={me.avatar ? 'Cambiar foto de perfil' : 'Poner foto de perfil'}>
+        <Avatar name={me.name} src={me.avatar} size={72} />
+        <span className="absolute -bottom-0.5 -right-0.5 grid h-7 w-7 place-items-center rounded-full border-2 border-white bg-sea text-white"><Camera size={14} /></span>
+        <input type="file" accept="image/*" className="sr-only" disabled={busy} onChange={pick} />
+      </label>
+      {me.avatar ? (
+        <button type="button" onClick={remove} disabled={busy} className="text-xs font-semibold text-ink-soft">Quitar</button>
+      ) : (
+        <span className="text-xs font-semibold text-sea">{busy ? 'Subiendo…' : 'Poner foto'}</span>
+      )}
+      {err && <span role="alert" className="max-w-24 text-center text-[11px] text-red-700">{err}</span>}
+    </div>
+  )
+}
+
 export function Profile() {
   const nav = useNavigate()
   const s = useAppState()
@@ -185,9 +229,7 @@ export function Profile() {
       <Header title="Perfil" />
       <div className="col flex-1 space-y-5 overflow-y-auto p-4 lg:py-6">
         <div className="flex items-center gap-4 rounded-2xl border border-line bg-white p-4">
-          <span className="grid h-14 w-14 shrink-0 place-items-center rounded-full bg-ink text-lg font-bold text-white">
-            {me.name.split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase()}
-          </span>
+          <AvatarPicker />
           <div className="min-w-0">
             <p className="truncate text-base font-bold">{me.name}</p>
             <p className="truncate text-[13px] text-ink-soft">@{me.username}</p>

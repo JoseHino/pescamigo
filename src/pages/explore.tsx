@@ -5,7 +5,7 @@ import {
 } from 'lucide-react'
 import MapView from '../components/MapView'
 import {
-  Button, Chip, Empty, ErrorMsg, Header, OutingTicket, OwnerBadge, Photo, PhotoViewer, Rating, SectionTitle, Stars, StatusBadge,
+  Avatar, Button, Chip, Empty, ErrorMsg, Header, OutingTicket, OwnerBadge, Photo, PhotoViewer, Rating, SectionTitle, Stars, StatusBadge,
 } from '../components/ui'
 import {
   boatRating, bookingWindow, canBook, conversationFor, fisherFeePct, fisherOutings, myActiveBooking, paysByCard, refresh, seatsLeft, upcomingOutings, useAppState, useMe,
@@ -446,7 +446,7 @@ export function OutingDetail() {
                 <span className="truncate text-[15px] font-bold">{boat.name}</span>
                 <OwnerBadge ownerId={boat.ownerId} size="sm" />
               </p>
-              <p className="truncate text-xs text-ink-soft">Patrón: {owner?.name ?? '—'}</p>
+              <p className="flex min-w-0 items-center gap-1.5 text-xs text-ink-soft"><Avatar name={owner?.name ?? '?'} src={owner?.avatar} size={20} /><span className="truncate">Patrón: {owner?.name ?? '—'}</span></p>
               <Rating boatId={boat.id} />
             </div>
             <ChevronRight size={18} className="shrink-0 text-ink-soft" />
@@ -556,7 +556,11 @@ export function BoatProfile() {
         <div className="col space-y-5 p-4">
           <div>
             <h2 className="wrap-anywhere text-2xl font-extrabold tracking-tight">{boat.name}</h2>
-            <p className="wrap-anywhere text-sm text-ink-soft">{boat.model ? `${boat.model} · ` : ''}Patrón: {owner?.name ?? '—'}</p>
+            {boat.model && <p className="wrap-anywhere text-sm text-ink-soft">{boat.model}</p>}
+            <p className="mt-2 flex items-center gap-2.5 text-sm">
+              <Avatar name={owner?.name ?? '?'} src={owner?.avatar} size={40} />
+              <span className="min-w-0"><span className="block text-xs text-ink-soft">Patrón</span><span className="block truncate font-bold">{owner?.name ?? '—'}</span></span>
+            </p>
             {since && <p className="text-xs text-ink-soft">En Pescamigo desde {since}</p>}
             <div className="mt-2 flex items-center gap-2">
               <Stars value={r.avg} size={16} />
@@ -634,7 +638,7 @@ export function BoatProfile() {
                 {reviews.map((x) => (
                   <li key={x.id} className="rounded-2xl border border-line bg-white p-4">
                     <div className="flex items-center justify-between gap-3">
-                      <span className="truncate text-sm font-bold">{x.authorName}</span>
+                      <span className="flex min-w-0 items-center gap-2"><Avatar name={x.authorName} src={x.authorAvatar} size={32} /><span className="truncate text-sm font-bold">{x.authorName}</span></span>
                       <span className="shrink-0"><Stars value={x.rating} /></span>
                     </div>
                     <p className="mt-1 flex items-center gap-1.5 text-xs font-semibold text-sea-dark">

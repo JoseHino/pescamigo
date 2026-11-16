@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { MessageCircle, SendHorizontal } from 'lucide-react'
-import { Empty, ErrorMsg, Header } from '../components/ui'
+import { Avatar, Empty, ErrorMsg, Header } from '../components/ui'
 import { NotFound } from './explore'
 import { isUnread, loadMessages, markConversationRead, sendMessage, useAppState, useMe } from '../data/store'
 import { ago, clock, dayLabel } from '../lib/format'
@@ -41,9 +41,7 @@ export function Inbox() {
               return (
                 <li key={c.id}>
                   <Link to={`/chat/${c.id}`} className="flex gap-3 px-4 py-3.5">
-                    <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-ink text-sm font-bold text-white">
-                      {(other?.name ?? '?').split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase()}
-                    </span>
+                    <Avatar name={other?.name ?? '?'} src={other?.avatar} size={44} />
                     <span className="min-w-0 flex-1">
                       <span className="flex items-baseline justify-between gap-3">
                         <span className={`truncate text-sm ${unread ? 'font-bold' : 'font-semibold'}`}>{other?.name ?? 'Usuario'}</span>
@@ -120,6 +118,7 @@ export function Chat() {
     <div className="flex h-full flex-col">
       <Header
         title={other?.name ?? 'Conversación'}
+        avatar={other ? <Avatar name={other.name} src={other.avatar} size={36} /> : undefined}
         sub={boat ? `${boat.name}${outing ? ` · ${dayLabel(outing.date)} ${outing.start}` : ''}` : undefined}
         back
         right={outing ? <Link to={`/salida/${outing.id}`} className="shrink-0 rounded-lg px-2 py-1 text-[13px] font-semibold text-sea">Ver salida</Link> : undefined}

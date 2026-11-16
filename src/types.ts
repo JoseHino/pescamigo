@@ -8,6 +8,8 @@ export interface PublicUser {
   role: Role | null
   /** Enlaces públicos del perfil (redes sociales), siempre https. */
   links: string[]
+  /** Foto de perfil (o null: se muestran las iniciales). */
+  avatar: string | null
   /** El patrón tiene su cuenta de cobro lista: sus salidas se pagan con tarjeta en la app. */
   cardReady: boolean
 }
@@ -115,6 +117,7 @@ export interface Review {
   boatId: string
   bookingId: string
   authorName: string
+  authorAvatar: string | null
   rating: number
   comment: string
   photo: string | null

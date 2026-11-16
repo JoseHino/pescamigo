@@ -5,7 +5,7 @@ import {
   Settings2, Wallet, X,
 } from 'lucide-react'
 import {
-  Button, Chip, Empty, ErrorMsg, Field, Header, Notice, OutingTicket, Photo, SectionTitle, StatusBadge, inputCls,
+  Avatar, Button, Chip, Empty, ErrorMsg, Field, Header, Notice, OutingTicket, Photo, SectionTitle, StatusBadge, inputCls,
 } from '../components/ui'
 import { NotFound } from './explore'
 import { OwnerTripRequests } from './requests'
@@ -93,11 +93,14 @@ function RequestCard({ b }: { b: Booking }) {
   return (
     <article className="min-w-0 space-y-3 rounded-2xl border border-line bg-white p-4">
       <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
+        <div className="flex min-w-0 items-center gap-3">
+          <Avatar name={userName(s, b.fisherId)} src={s.users.find((u) => u.id === b.fisherId)?.avatar} size={44} />
+          <div className="min-w-0">
           <p className="truncate text-[15px] font-bold">{userName(s, b.fisherId)}</p>
           <p className="text-[13px] text-ink-soft">
             Pide <b className="text-ink">{b.seats} {b.seats === 1 ? 'plaza' : 'plazas'}</b> · quedan {left}
           </p>
+          </div>
         </div>
         <span className="tnum shrink-0 text-[15px] font-bold">{euro(b.baseAmount)}</span>
       </div>

@@ -98,7 +98,7 @@ export function isUnread(c: Conversation, userId: string) {
 /* ---------- carga de datos ---------- */
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
-const toUser = (r: any): PublicUser => ({ id: r.id, username: r.username, name: r.full_name, role: r.role, links: r.links ?? [], cardReady: !!r.stripe_ready })
+const toUser = (r: any): PublicUser => ({ id: r.id, username: r.username, name: r.full_name, role: r.role, links: r.links ?? [], cardReady: !!r.stripe_ready, avatar: r.avatar_url ?? null })
 const toBoat = (r: any): Boat => ({
   id: r.id, ownerId: r.owner_id, name: r.name, model: r.model, lengthM: Number(r.length_m), capacity: r.capacity,
   portId: r.port_id, description: r.description, photos: r.photos ?? [],
@@ -145,7 +145,7 @@ export function refresh(): Promise<void> {
   if (loading) return loading
   loading = (async () => {
     const [users, boats, outings, bookings, reviews, notices, settings, rules, blocked, convs, trips, treqs, toffers] = await Promise.all([
-      supabase.from('profiles').select('id,username,full_name,role,links,stripe_ready'),
+      supabase.from('profiles').select('id,username,full_name,role,links,stripe_ready,avatar_url'),
       supabase.from('boats').select('*'),
       supabase.from('outings').select('*').gte('day', addDays(-120)),
       supabase.from('bookings').select('*'),
@@ -183,6 +183,7 @@ export function refresh(): Promise<void> {
         date: String(r.created_at).slice(0, 10),
         outingDay: r.outing_day ?? null,
         authorName: shortName(us.find((u) => u.id === r.author_id)?.name ?? 'Pescador'),
+        authorAvatar: us.find((u) => u.id === r.author_id)?.avatar ?? null,
       })),
       notices: (notices.data ?? []).map(toNotice),
       rules: (rules.data ?? []).map(toRule),
@@ -366,6 +367,26 @@ export function setNotifyEmail(on: boolean) {
     .then(({ error }) => {
       if (error) commit({ me })
     })
+}
+
+/** Pone (o quita, con null) la foto de perfil. Se reduce a 512 px y se borra la anterior del almacenamiento. */
+export async function setAvatar(dataUrl: string | null): Promise<string | null> {
+  const me = state.me
+  if (!me) return GENERIC
+  let url: string | null = null
+  if (dataUrl) {
+    try {
+      url = await uploadPhoto(dataUrl)
+    } catch {
+      return 'No se ha podido subir la foto. Inténtalo de nuevo.'
+    }
+  }
+  const { error } = await supabase.from('profiles').update({ avatar_url: url }).eq('id', me.id)
+  if (error) return GENERIC
+  const old = me.avatar?.split('/storage/v1/object/public/photos/')[1]
+  if (old && old.startsWith(`${me.id}/`)) void supabase.storage.from('photos').remove([old]).then(() => undefined)
+  commit({ me: { ...me, avatar: url }, users: state.users.map((u) => (u.id === me.id ? { ...u, avatar: url } : u)) })
+  return null
 }
 
 /* ---------- fotos ---------- */

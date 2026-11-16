@@ -47,7 +47,7 @@ function AlertsBell() {
   )
 }
 
-export function Header({ title, back, right, sub }: { title: string; back?: boolean; right?: ReactNode; sub?: ReactNode }) {
+export function Header({ title, back, right, sub, avatar }: { title: string; back?: boolean; right?: ReactNode; sub?: ReactNode; avatar?: ReactNode }) {
   const nav = useNavigate()
   return (
     <header className="flex h-14 shrink-0 items-center gap-2 border-b border-line bg-white px-3 lg:h-16 lg:px-6">
@@ -56,6 +56,7 @@ export function Header({ title, back, right, sub }: { title: string; back?: bool
           <ArrowLeft size={20} /> Volver
         </button>
       )}
+      {avatar}
       <div className={`min-w-0 flex-1 ${back ? '' : 'pl-2'}`}>
         <h1 className="truncate text-[17px] font-bold leading-tight">{title}</h1>
         {sub && <p className="truncate text-xs text-ink-soft">{sub}</p>}
@@ -105,6 +106,17 @@ export function OwnerBadge({ ownerId, size = 'md' }: { ownerId: string; size?: '
     >
       <Icon size={size === 'sm' ? 11 : 13} className="shrink-0" /> {LEVEL_LABEL[level]}
     </span>
+  )
+}
+
+/** Foto de perfil redonda; sin foto, las iniciales sobre fondo azul oscuro. */
+export function Avatar({ name, src, size = 40, className = '' }: { name: string; src?: string | null; size?: number; className?: string }) {
+  const initials = name.split(' ').filter(Boolean).map((w) => w[0]).slice(0, 2).join('').toUpperCase() || '?'
+  const style = { width: size, height: size, fontSize: Math.max(11, Math.round(size * 0.36)) }
+  return src ? (
+    <img src={src} alt="" style={style} className={`shrink-0 rounded-full bg-sea-50 object-cover ${className}`} />
+  ) : (
+    <span style={style} className={`grid shrink-0 place-items-center rounded-full bg-ink font-bold text-white ${className}`} aria-hidden="true">{initials}</span>
   )
 }
 
