@@ -8,11 +8,15 @@ export interface PublicUser {
   role: Role | null
   /** Enlaces públicos del perfil (redes sociales), siempre https. */
   links: string[]
+  /** El patrón tiene su cuenta de cobro lista: sus salidas se pagan con tarjeta en la app. */
+  cardReady: boolean
 }
 
 export interface User extends PublicUser {
   email: string
   notifyEmail: boolean
+  /** El patrón ya ha empezado a crear su cuenta de cobro en Stripe. */
+  stripeConnected: boolean
   prefs: { ports: string[]; types: string[]; push: boolean }
 }
 
@@ -76,6 +80,10 @@ export interface Booking {
   ownerAmount: number
   paymentMethod: 'cash' | 'card'
   paymentStatus: 'none' | 'authorized' | 'paid' | 'refunded' | 'failed'
+  /** Plazo para pagar una plaza aceptada (pago con tarjeta). */
+  payBy: string | null
+  refundStatus: 'none' | 'due' | 'done' | 'failed'
+  payoutStatus: 'none' | 'due' | 'paid' | 'failed' | 'not_applicable'
   reason: string
   cancelledBy: 'fisher' | 'owner' | 'system' | null
   createdAt: string
@@ -142,7 +150,12 @@ export interface Message {
   createdAt: string
 }
 
-export interface Settings { commissionPct: number; paymentsEnabled: boolean }
+export interface Settings {
+  commissionPct: number
+  paymentsEnabled: boolean
+  /** Cancelando con al menos estas horas de antelación se devuelve el 100 %. */
+  refundCutoffHours: number
+}
 
 export interface State {
   ready: boolean // false mientras se comprueba la sesión

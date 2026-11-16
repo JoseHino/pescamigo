@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import { Anchor, Bell, ChevronRight, Fish, LayoutDashboard, LogOut, Pencil, Plus, Smartphone } from 'lucide-react'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { Anchor, Bell, ChevronRight, CreditCard, FileText, Fish, LayoutDashboard, LogOut, Pencil, Plus, Smartphone } from 'lucide-react'
 import { Button, Chip, Empty, ErrorMsg, Header, LinksInput, OwnerBadge, Photo } from '../components/ui'
-import { markNoticesRead, myBoats, saveLinks, setNotifyEmail, signOut, updatePrefs, useAppState, useMe } from '../data/store'
+import { markNoticesRead, myBoats, payoutAccount, saveLinks, setNotifyEmail, signOut, updatePrefs, useAppState, useMe } from '../data/store'
 import { PORTS, portById } from '../data/seed'
 import { FISHING_TYPES, HABITUAL_MIN, SUPER_MIN, ago } from '../lib/format'
 import { disablePush, enablePush, pushState, type PushState } from '../lib/push'
@@ -91,6 +91,53 @@ function DevicePush() {
       </div>
       <ErrorMsg>{err}</ErrorMsg>
     </div>
+  )
+}
+
+/** Cuenta de cobro del patrón (Stripe): para cobrar con tarjeta hay que darla de alta una vez. Solo se ve con los pagos activos. */
+function PayoutCard() {
+  const me = useMe()
+  const [q, setQ] = useSearchParams()
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState<string | null>(null)
+  const back = q.get('cobros')
+  useEffect(() => {
+    // vuelta del alta en Stripe: se comprueba el estado de la cuenta
+    if (!back) return
+    void payoutAccount('status').then((r) => {
+      if (r.error) setErr(r.error)
+      setQ({}, { replace: true })
+    })
+  }, [back, setQ])
+  if (!me) return null
+  const ready = me.cardReady
+  const go = async () => {
+    setBusy(true)
+    setErr(null)
+    const r = await payoutAccount('onboard')
+    setBusy(false)
+    if (r.error) setErr(r.error)
+  }
+  return (
+    <section className="space-y-3 rounded-2xl border border-line bg-white p-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h2 className="flex items-center gap-2 text-sm font-bold"><CreditCard size={16} className="text-sea" /> Cobros con tarjeta</h2>
+        <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${ready ? 'bg-ok-50 text-ok' : 'bg-buoy-50 text-buoy-dark'}`}>
+          {ready ? 'Activos' : me.stripeConnected ? 'Falta completar' : 'Sin configurar'}
+        </span>
+      </div>
+      <p className="text-[13px] text-ink-soft">
+        {ready
+          ? 'Los pescadores pagan en la app y recibes tu parte en tu cuenta bancaria después de cada salida.'
+          : 'Da de alta tu cuenta de cobro para que los pescadores paguen en la app. Es un alta segura con Stripe, se hace una sola vez y te pedirá tus datos y tu cuenta bancaria.'}
+      </p>
+      {!ready && (
+        <Button full disabled={busy || !!back} onClick={go}>
+          {busy ? 'Abriendo…' : me.stripeConnected ? 'Completar mi cuenta de cobro' : 'Configurar mis cobros'}
+        </Button>
+      )}
+      <ErrorMsg>{err}</ErrorMsg>
+    </section>
   )
 }
 
@@ -204,6 +251,7 @@ export function Profile() {
             </div>
           </section>
         )}
+        {me.role === 'owner' && s.settings.paymentsEnabled && <PayoutCard />}
         {me.role === 'owner' && <OwnerLevelCard ownerId={me.id} />}
 
         <section className="space-y-4 rounded-2xl border border-line bg-white p-4">
@@ -249,6 +297,15 @@ export function Profile() {
             )}
           </section>
         )}
+
+        <Link to="/condiciones" className="flex items-center gap-3 rounded-2xl border border-line bg-white p-4">
+          <FileText size={20} className="shrink-0 text-sea" />
+          <span className="min-w-0 flex-1">
+            <span className="block text-sm font-bold">Condiciones y garantía</span>
+            <span className="block truncate text-xs text-ink-soft">Cómo funcionan los pagos, la comisión y las devoluciones</span>
+          </span>
+          <ChevronRight size={18} className="shrink-0 text-ink-soft" />
+        </Link>
 
         <Button variant="outline" full onClick={async () => { await signOut(); nav('/') }}><LogOut size={16} /> Cerrar sesión</Button>
       </div>

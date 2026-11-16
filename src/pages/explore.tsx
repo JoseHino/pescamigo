@@ -8,8 +8,9 @@ import {
   Button, Chip, Empty, Header, OutingTicket, OwnerBadge, Photo, PhotoViewer, Rating, SectionTitle, SocialLinks, Stars, StatusBadge,
 } from '../components/ui'
 import {
-  boatRating, bookingWindow, canBook, conversationFor, fisherOutings, myActiveBooking, seatsLeft, upcomingOutings, useAppState, useMe,
+  boatRating, bookingWindow, canBook, conversationFor, fisherOutings, myActiveBooking, paysByCard, seatsLeft, upcomingOutings, useAppState, useMe,
 } from '../data/store'
+import { Guarantee } from './legal'
 import { PORTS, portById } from '../data/seed'
 import { BOAT_EQUIPMENT, FISHING_TYPES, WEEKDAYS, dayLabel, duration, euro, isoDate, longDate, monthLabel, shortDate } from '../lib/format'
 import type { Outing } from '../types'
@@ -299,7 +300,8 @@ export function OutingDetail() {
   const chat = mine ? conversationFor(s, mine.id) : null
   const win = bookingWindow(boat, o)
   const isOwner = boat.ownerId === me.id
-  const { paymentsEnabled, commissionPct } = s.settings
+  const { commissionPct } = s.settings
+  const card = paysByCard(s, boat)
 
   const rows = [
     { icon: Clock, label: 'Horario', value: `${o.start} – ${o.end} (${duration(o.start, o.end)})` },
@@ -366,16 +368,18 @@ export function OutingDetail() {
             <div className="mt-3 flex items-center gap-3">
               <Banknote size={18} className="shrink-0 text-ok" />
               <span className="min-w-0 flex-1 text-sm">
-                {paymentsEnabled ? 'Reparto de gastos, con tarjeta en la app' : 'Reparto de gastos, en efectivo al patrón el día de la salida'}
+                {card ? 'Pago con tarjeta en la app cuando el patrón acepte' : 'Reparto de gastos, en efectivo al patrón el día de la salida'}
               </span>
               <b className="tnum shrink-0">{euro(o.costShare)}</b>
             </div>
             <p className="mt-2 text-xs text-ink-soft">
-              {paymentsEnabled
-                ? `Incluye la comisión de Pescamigo (${String(commissionPct).replace('.', ',')} %). Verás el desglose antes de enviar la solicitud.`
+              {card
+                ? `Precio final, sin gastos añadidos. Incluye la comisión de Pescamigo (${String(commissionPct).replace('.', ',')} %). Pedir plaza es gratis.`
                 : 'Solicitar plaza en Pescamigo es gratis.'}
             </p>
           </div>
+
+          {me.role === 'fisher' && <Guarantee card={card} />}
         </div>
       </div>
 

@@ -10,6 +10,7 @@ import { Checkout, ReviewForm, Trips } from './pages/booking'
 import { BoatEdit, CalendarPage, Income, OutingEdit, Panel, Publish } from './pages/owner'
 import { Chat, Inbox } from './pages/chat'
 import { Alerts, Profile } from './pages/account'
+import { Terms } from './pages/legal'
 import type { Role } from './types'
 
 function Frame({ children }: { children: ReactNode }) {
@@ -182,6 +183,8 @@ function Boot() {
         <Route path="/acceso" element={<Auth />} />
       </Route>
       <Route path="/rol" element={<NeedsRole />} />
+      {/* Pública: se puede leer sin cuenta */}
+      <Route path="/condiciones" element={<Terms />} />
 
       <Route element={<Private />}>
         <Route element={<Tabs />}>

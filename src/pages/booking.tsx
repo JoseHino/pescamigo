@@ -1,19 +1,21 @@
-import { useState, type FormEvent } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
-import { Camera, CheckCircle2, MessageCircle, Minus, Plus, Send, Star, Ticket } from 'lucide-react'
-import { Button, Empty, ErrorMsg, Field, Header, OutingTicket, Photo, SectionTitle, StatusBadge, inputCls } from '../components/ui'
+import { useEffect, useState, type FormEvent } from 'react'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { Camera, CheckCircle2, CreditCard, MessageCircle, Minus, Plus, Send, Star, Ticket } from 'lucide-react'
+import { Button, Empty, ErrorMsg, Field, Header, Notice, OutingTicket, Photo, SectionTitle, StatusBadge, inputCls } from '../components/ui'
 import { NotFound } from './explore'
 import {
-  addReview, bookingWindow, cancelBooking, conversationFor, isPast, myActiveBooking, requestBooking, seatsLeft, useAppState, useMe,
+  addReview, bookingWindow, cancelBooking, conversationFor, isPast, myActiveBooking, payBooking, paysByCard, refresh, requestBooking,
+  seatsLeft, useAppState, useMe,
 } from '../data/store'
+import { Guarantee } from './legal'
 import { portById } from '../data/seed'
-import { euro, longDate } from '../lib/format'
+import { euro, longDate, shortDate, toDate } from '../lib/format'
 import { fileToDataUrl } from '../lib/image'
 import type { Booking, Outing } from '../types'
 
 /** Desglose de lo que se paga. Con pagos en la app muestra la comisión; si no, el pago en efectivo. */
-export function PriceBreakdown({ total, pct, paymentsEnabled }: { total: number; pct: number; paymentsEnabled: boolean }) {
-  if (!paymentsEnabled) {
+export function PriceBreakdown({ total, pct, card }: { total: number; pct: number; card: boolean }) {
+  if (!card) {
     return (
       <div className="space-y-2 text-sm">
         <div className="flex justify-between gap-3">
@@ -28,7 +30,7 @@ export function PriceBreakdown({ total, pct, paymentsEnabled }: { total: number;
   return (
     <div className="space-y-2 text-sm">
       <div className="flex justify-between gap-3">
-        <span>Total que pagas</span>
+        <span>Total que pagas (precio final)</span>
         <b className="tnum shrink-0">{euro(total)}</b>
       </div>
       <div className="flex justify-between gap-3 text-ink-soft">
@@ -59,7 +61,8 @@ export function Checkout() {
   if (!o || !boat || !me) return <NotFound what="Esta salida ya no está disponible." />
   const left = seatsLeft(s, o)
   const port = portById(o.portId)
-  const { paymentsEnabled, commissionPct } = s.settings
+  const { commissionPct } = s.settings
+  const card = paysByCard(s, boat)
 
   if (done) {
     return (
@@ -114,7 +117,7 @@ export function Checkout() {
           </div>
 
           <div className="rounded-2xl border border-line bg-white p-4">
-            <PriceBreakdown total={o.costShare * seats} pct={commissionPct} paymentsEnabled={paymentsEnabled} />
+            <PriceBreakdown total={o.costShare * seats} pct={commissionPct} card={card} />
           </div>
 
           <Field label="Mensaje para el patrón (opcional)" hint="Por ejemplo, tu experiencia pescando o si llevas tu propio equipo.">
@@ -124,15 +127,21 @@ export function Checkout() {
           <div className="rounded-2xl bg-sea-50 p-4 text-[13px] text-sea-dark">
             <p className="font-semibold">Cómo sigue</p>
             <p className="mt-1">
-              El patrón recibe tu solicitud y la acepta o la rechaza. Te avisaremos por correo y en la app. Cuando la acepte,
-              la plaza queda confirmada{paymentsEnabled ? ' al completar el pago' : ''} y se abre un chat con él.
+              El patrón recibe tu solicitud y la acepta o la rechaza. Te avisaremos por correo y en la app.
+              {card
+                ? ' Cuando la acepte, tendrás hasta 24 horas para pagar con tarjeta en la app. Al pagar, la plaza queda confirmada y se abre un chat con él. Ahora no se te cobra nada.'
+                : ' Cuando la acepte, la plaza queda confirmada y se abre un chat con él.'}
             </p>
           </div>
 
           <label className="flex items-start gap-3 text-[13px] leading-snug">
             <input type="checkbox" checked={accept} onChange={(e) => setAccept(e.target.checked)} className="mt-0.5 h-5 w-5 shrink-0 accent-[#0A6CCF]" />
-            <span>Entiendo que es una salida privada con gastos compartidos, no un servicio profesional, y que a bordo sigo las indicaciones del patrón.</span>
+            <span>
+              Entiendo que es una salida privada con gastos compartidos, no un servicio profesional, que a bordo sigo las indicaciones del patrón
+              y acepto las <Link to="/condiciones" className="font-semibold text-sea underline">condiciones y la garantía</Link>.
+            </span>
           </label>
+          <Guarantee card={card} />
           <ErrorMsg>{err ?? blocked}</ErrorMsg>
         </div>
         <div className="col border-t border-line bg-white p-4">
@@ -152,8 +161,23 @@ function TripFooter({ b, o }: { b: Booking; o: Outing }) {
   const [busy, setBusy] = useState(false)
   const reviewed = s.reviews.some((r) => r.bookingId === b.id)
   const past = isPast(o)
+  const paid = b.paymentStatus === 'paid'
+  const hoursLeft = (toDate(o.date, o.start).getTime() - Date.now()) / 3600000
+  const cutoff = s.settings.refundCutoffHours
+  const pay = async () => {
+    setBusy(true)
+    const e = await payBooking(b.id)
+    setBusy(false)
+    if (e) window.alert(e)
+  }
   const cancel = async () => {
-    const what = b.status === 'pending' ? '¿Retirar tu solicitud?' : '¿Cancelar tu reserva? El patrón recibirá un aviso.'
+    const what = b.status === 'pending'
+      ? '¿Retirar tu solicitud?'
+      : paid
+        ? hoursLeft >= cutoff
+          ? `¿Cancelar tu reserva? Te devolveremos el importe completo (${euro(b.amountTotal)}).`
+          : `¿Cancelar tu reserva? Faltan menos de ${cutoff} horas para la salida: según las condiciones, el importe no se devuelve.`
+        : '¿Cancelar tu reserva? El patrón recibirá un aviso.'
     if (!window.confirm(what)) return
     setBusy(true)
     const e = await cancelBooking(b.id)
@@ -172,9 +196,21 @@ function TripFooter({ b, o }: { b: Booking; o: Outing }) {
       {b.reason && (b.status === 'rejected' || b.status === 'cancelled') && (
         <p className="wrap-anywhere text-[13px] text-ink-soft">Motivo: {b.reason}</p>
       )}
-      {b.status === 'accepted' && (
-        <p className="text-[13px] text-sea-dark">El patrón ha aceptado. Falta completar el pago para confirmar la plaza.</p>
+      {b.status === 'accepted' && b.paymentMethod === 'card' && !paid && !past && (
+        <div className="space-y-2 rounded-xl bg-sea-50 p-3">
+          <p className="text-[13px] text-sea-dark">
+            El patrón ha aceptado. Paga {b.payBy ? `antes del ${shortDate(b.payBy.slice(0, 10))} a las ${new Date(b.payBy).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}` : 'cuanto antes'} para
+            confirmar tu plaza; si no, se libera. Si la salida no se hace, te devolvemos el 100 %.
+          </p>
+          <Button full variant="accent" disabled={busy} onClick={pay}><CreditCard size={16} /> {busy ? 'Abriendo el pago…' : `Pagar ${euro(b.amountTotal)}`}</Button>
+        </div>
       )}
+      {b.status === 'accepted' && b.paymentMethod === 'cash' && (
+        <p className="text-[13px] text-sea-dark">El patrón ha aceptado tu solicitud.</p>
+      )}
+      {b.status === 'confirmed' && paid && <p className="flex items-center gap-1.5 text-[13px] text-ok"><CheckCircle2 size={14} /> Pagado con tarjeta</p>}
+      {b.refundStatus === 'due' && <p className="text-[13px] font-semibold text-sea-dark">Devolución de {euro(b.amountTotal)} en curso.</p>}
+      {b.refundStatus === 'done' && <p className="flex items-center gap-1.5 text-[13px] font-semibold text-ok"><CheckCircle2 size={14} /> Te hemos devuelto {euro(b.amountTotal)}.</p>}
       <div className="flex flex-wrap gap-2">
         {chat && (
           <Button size="sm" onClick={() => nav(`/chat/${chat.id}`)}><MessageCircle size={15} /> Chat con el patrón</Button>
@@ -200,6 +236,16 @@ function TripFooter({ b, o }: { b: Booking; o: Outing }) {
 export function Trips() {
   const s = useAppState()
   const me = useMe()
+  // Vuelta de la página de pago de Stripe
+  const [q, setQ] = useSearchParams()
+  const pago = q.get('pago')
+  useEffect(() => {
+    if (pago !== 'ok') return
+    // la confirmación llega por el aviso de Stripe en unos segundos: se recarga un par de veces
+    const t1 = window.setTimeout(() => void refresh(), 2500)
+    const t2 = window.setTimeout(() => void refresh(), 7000)
+    return () => { window.clearTimeout(t1); window.clearTimeout(t2) }
+  }, [pago])
   const mine = s.bookings
     .filter((b) => b.fisherId === me?.id)
     .map((b) => ({ b, o: s.outings.find((o) => o.id === b.outingId) }))
@@ -216,6 +262,16 @@ export function Trips() {
     <div className="flex h-full flex-col">
       <Header title="Mis reservas" />
       <div className="col flex-1 overflow-y-auto p-4 lg:py-6">
+        {pago && (
+          <div className="mb-4">
+            <Notice tone={pago === 'ok' ? 'ok' : 'info'}>
+              {pago === 'ok'
+                ? 'Pago recibido. En unos segundos verás tu plaza confirmada y se abrirá el chat con el patrón.'
+                : 'No se ha completado el pago. Puedes volver a intentarlo antes de que acabe el plazo.'}
+            </Notice>
+            <button type="button" onClick={() => setQ({}, { replace: true })} className="mt-1 text-xs font-semibold text-ink-soft">Cerrar aviso</button>
+          </div>
+        )}
         {mine.length === 0 ? (
           <Empty icon={<Ticket size={24} />} title="Todavía no has pedido plaza" text="Cuando solicites plaza en una salida aparecerá aquí con su estado."
             action={<Link to="/salidas" className="font-semibold text-sea">Ver salidas publicadas</Link>} />

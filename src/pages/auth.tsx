@@ -241,6 +241,11 @@ export function Auth() {
             <input className={inputCls} value={f.password} onChange={on('password')} type="password" autoComplete={register ? 'new-password' : 'current-password'} />
           </Field>
           <ErrorMsg>{err}</ErrorMsg>
+          {register && (
+            <p className="text-xs text-ink-soft">
+              Al crear la cuenta aceptas las <Link to="/condiciones" className="font-semibold text-sea underline">condiciones y la garantía</Link> de Pescamigo.
+            </p>
+          )}
           <Button full type="submit" disabled={busy}>
             {busy ? (register ? 'Creando cuenta…' : 'Entrando…') : register ? 'Crear cuenta' : 'Iniciar sesión'}
           </Button>

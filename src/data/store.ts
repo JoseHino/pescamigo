@@ -11,7 +11,7 @@ const EMPTY = {
   users: [], boats: [], outings: [], bookings: [], reviews: [], notices: [],
   rules: [], blocked: [], conversations: [], messages: {}, tripCounts: {},
 }
-let state: State = { ready: false, me: null, settings: { commissionPct: 20, paymentsEnabled: false }, ...EMPTY }
+let state: State = { ready: false, me: null, settings: { commissionPct: 15, paymentsEnabled: false, refundCutoffHours: 24 }, ...EMPTY }
 const listeners = new Set<() => void>()
 
 function commit(patch: Partial<State>) {
@@ -98,7 +98,7 @@ export function isUnread(c: Conversation, userId: string) {
 /* ---------- carga de datos ---------- */
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
-const toUser = (r: any): PublicUser => ({ id: r.id, username: r.username, name: r.full_name, role: r.role, links: r.links ?? [] })
+const toUser = (r: any): PublicUser => ({ id: r.id, username: r.username, name: r.full_name, role: r.role, links: r.links ?? [], cardReady: !!r.stripe_ready })
 const toBoat = (r: any): Boat => ({
   id: r.id, ownerId: r.owner_id, name: r.name, model: r.model, lengthM: Number(r.length_m), capacity: r.capacity,
   portId: r.port_id, description: r.description, photos: r.photos ?? [],
@@ -115,7 +115,8 @@ const toBooking = (r: any): Booking => ({
   id: r.id, outingId: r.outing_id, fisherId: r.fisher_id, seats: r.seats, status: r.status, message: r.message,
   amountTotal: Number(r.amount_total), commissionPct: Number(r.commission_pct), commissionAmount: Number(r.commission_amount),
   ownerAmount: Number(r.owner_amount), paymentMethod: r.payment_method, paymentStatus: r.payment_status,
-  reason: r.reason, cancelledBy: r.cancelled_by, createdAt: r.created_at, updatedAt: r.updated_at,
+  reason: r.reason, cancelledBy: r.cancelled_by,
+  payBy: r.pay_by ?? null, refundStatus: r.refund_status ?? 'none', payoutStatus: r.payout_status ?? 'none', createdAt: r.created_at, updatedAt: r.updated_at,
 })
 const toNotice = (r: any): Notice => ({
   id: r.id, userId: r.user_id, title: r.title, body: r.body, link: r.link, createdAt: r.created_at, read: r.read,
@@ -142,13 +143,13 @@ export function refresh(): Promise<void> {
   if (loading) return loading
   loading = (async () => {
     const [users, boats, outings, bookings, reviews, notices, settings, rules, blocked, convs, trips] = await Promise.all([
-      supabase.from('profiles').select('id,username,full_name,role,links'),
+      supabase.from('profiles').select('id,username,full_name,role,links,stripe_ready'),
       supabase.from('boats').select('*'),
       supabase.from('outings').select('*').gte('day', addDays(-120)),
       supabase.from('bookings').select('*'),
       supabase.from('reviews').select('*').order('created_at', { ascending: false }),
       supabase.from('notifications').select('*').order('created_at', { ascending: false }).limit(60),
-      supabase.from('app_settings').select('commission_pct,payments_enabled').maybeSingle(),
+      supabase.from('app_settings').select('commission_pct,payments_enabled,refund_cutoff_hours').maybeSingle(),
       supabase.from('outing_rules').select('*').eq('active', true),
       supabase.from('boat_blocked_days').select('boat_id,day').gte('day', isoDate(new Date())),
       supabase.from('conversations').select('*').order('last_message_at', { ascending: false }),
@@ -161,8 +162,9 @@ export function refresh(): Promise<void> {
     commit({
       users: us,
       settings: {
-        commissionPct: Number(settings.data?.commission_pct ?? 20),
+        commissionPct: Number(settings.data?.commission_pct ?? 15),
         paymentsEnabled: !!settings.data?.payments_enabled,
+        refundCutoffHours: Number(settings.data?.refund_cutoff_hours ?? 24),
       },
       boats: (boats.data ?? []).map(toBoat),
       outings: (outings.data ?? []).map(toOuting),
@@ -204,6 +206,7 @@ async function loadSession(session: Session | null) {
       ...toUser(data),
       email: data.email,
       notifyEmail: data.notify_email,
+      stripeConnected: !!data.stripe_account_id,
       prefs: { ports: data.pref_ports ?? [], types: data.pref_types ?? [], push: data.notify_new_outings },
     },
   })
@@ -508,6 +511,48 @@ export async function requestBooking(outingId: string, seats: number, message: s
   const { error } = await supabase.rpc('request_booking', { p_outing: outingId, p_seats: seats, p_message: message })
   await refresh()
   return dbError(error)
+}
+
+/* ---------- pagos con tarjeta (Stripe) ---------- */
+
+/** Las salidas de este barco se pagan con tarjeta en la app (pagos activos y el patrón con su cuenta de cobro lista). */
+export function paysByCard(s: State, boat: Boat | undefined | null) {
+  if (!boat || !s.settings.paymentsEnabled) return false
+  return !!s.users.find((u) => u.id === boat.ownerId)?.cardReady
+}
+
+async function callPagos(body: Record<string, unknown>): Promise<{ ok: boolean; data: any }> {
+  const { data: sess } = await supabase.auth.getSession()
+  try {
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/pagos`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', apikey: SUPABASE_KEY, Authorization: `Bearer ${sess.session?.access_token ?? ''}` },
+      body: JSON.stringify(body),
+    })
+    return { ok: res.ok, data: await res.json().catch(() => ({})) }
+  } catch {
+    return { ok: false, data: {} }
+  }
+}
+
+/** Lleva al pescador a la página de pago segura de Stripe. Devuelve un error o nada (si redirige). */
+export async function payBooking(bookingId: string): Promise<string | null> {
+  const { ok, data } = await callPagos({ action: 'checkout', booking_id: bookingId })
+  if (!ok || !data.url) return typeof data.error === 'string' ? data.error : GENERIC
+  window.location.href = data.url
+  return null
+}
+
+/** Cuenta de cobro del patrón: 'onboard' abre el alta en Stripe; 'status' comprueba si ya puede cobrar. */
+export async function payoutAccount(action: 'onboard' | 'status'): Promise<{ error?: string; ready?: boolean; connected?: boolean }> {
+  const { ok, data } = await callPagos({ action })
+  if (!ok) return { error: typeof data.error === 'string' ? data.error : GENERIC }
+  if (action === 'onboard' && data.url) {
+    window.location.href = data.url
+    return {}
+  }
+  await refresh()
+  return { ready: !!data.ready, connected: !!data.connected }
 }
 
 export async function cancelBooking(bookingId: string): Promise<string | null> {

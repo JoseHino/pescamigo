@@ -793,7 +793,8 @@ export function Income() {
         {!paymentsEnabled && (
           <p className="rounded-2xl bg-sea-50 p-4 text-[13px] text-sea-dark">
             Ahora mismo el reparto de gastos se paga en efectivo, directamente entre pescador y patrón, y Pescamigo no cobra comisión.
-            Cuando se activen los pagos en la app verás aquí la comisión ({String(commissionPct).replace('.', ',')} %) y lo que recibes por cada reserva.
+            Cuando se activen los pagos con tarjeta, el pescador pagará en la app, Pescamigo se quedará el {String(commissionPct).replace('.', ',')} % y
+            tú recibirás el resto en tu cuenta después de cada salida.
           </p>
         )}
         <div className="grid grid-cols-3 gap-2">
@@ -818,7 +819,10 @@ export function Income() {
                   <p className="truncate text-sm font-bold">{shortDate(o.date)} · {boat?.name}</p>
                   <p className="truncate text-[13px] text-ink-soft">{userName(s, b.fisherId)} · {b.seats} {b.seats === 1 ? 'plaza' : 'plazas'}</p>
                   <p className="text-xs text-ink-soft">
-                    {b.paymentMethod === 'cash' ? 'Efectivo, sin comisión' : b.paymentStatus === 'paid' ? 'Pagado con tarjeta' : 'Pendiente de pago'}
+                    {b.paymentMethod === 'cash' ? 'Efectivo, sin comisión'
+                      : b.payoutStatus === 'paid' ? 'Transferido a tu cuenta'
+                      : b.paymentStatus === 'paid' ? 'Pagado con tarjeta: lo recibes después de la salida'
+                      : 'Pendiente de que el pescador pague'}
                     {b.status === 'confirmed' && isPast(o) ? ' · realizada' : ''}
                   </p>
                 </div>
