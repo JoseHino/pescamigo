@@ -121,13 +121,13 @@ function Tabs({ detail = false }: { detail?: boolean }) {
             key={t.to}
             to={t.to}
             className={({ isActive }) =>
-              `relative flex min-w-0 flex-col items-center gap-0.5 py-2 text-[10.5px] font-semibold sm:text-[11px] lg:flex-row lg:gap-3 lg:rounded-xl lg:px-3 lg:py-2.5 lg:text-sm ${
+              `relative flex min-w-0 flex-col items-center gap-0.5 py-2 text-[12px] font-semibold sm:text-[12.5px] lg:flex-row lg:gap-3 lg:rounded-xl lg:px-3 lg:py-2.5 lg:text-sm ${
                 isActive ? 'text-sea lg:bg-sea-50' : 'text-ink-soft lg:hover:bg-foam'
               }`
             }
           >
             <span className="relative">
-              <t.icon size={22} />
+              <t.icon size={25} />
               <Badge n={t.badge} />
             </span>
             <span className="max-w-full truncate">{t.label}</span>

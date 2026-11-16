@@ -110,22 +110,50 @@ export function OutingsPage() {
   return (
     <div className="flex h-full flex-col">
       <Header title="Salidas publicadas" />
-      <div className="border-b border-line bg-white py-2.5">
-        {/* Todos los puertos, tengan o no salidas ahora: así el pescador ve dónde puede salir. */}
-        <div className="flex gap-2 overflow-x-auto px-4 pb-2 [scrollbar-width:none] lg:flex-wrap lg:px-6">
-          <Chip active={!port} onClick={() => setPort(null)}>Todos los puertos</Chip>
-          {PORTS.map((p) => (
-            <Chip key={p.id} active={port === p.id} onClick={() => setPort(port === p.id ? null : p.id)} label={`${p.name} (${p.town})`}>{p.short}</Chip>
-          ))}
-        </div>
-        <div className="flex gap-2 overflow-x-auto px-4 [scrollbar-width:none] lg:flex-wrap lg:px-6">
-          <Chip active={!type} onClick={() => setType(null)}>Cualquier pesca</Chip>
-          {FISHING_TYPES.map((t) => (
-            <Chip key={t} active={type === t} onClick={() => setType(type === t ? null : t)}>{t}</Chip>
-          ))}
-        </div>
+      {/* Filtros como dos desplegables: más fáciles que botones que se salen de la pantalla. */}
+      <div className="grid grid-cols-2 gap-2 border-b border-line bg-white px-4 py-3 lg:flex lg:px-6">
+        <label className="block min-w-0 lg:w-64">
+          <span className="mb-1 block text-[13px] font-semibold text-ink-soft">Puerto</span>
+          <select className={`${selectCls} ${port ? 'border-sea bg-sea-50 font-semibold text-sea-dark' : ''}`} value={port ?? ''} onChange={(e) => setPort(e.target.value || null)}>
+            <option value="">Todos</option>
+            {PORTS.map((p) => <option key={p.id} value={p.id}>{p.short}</option>)}
+          </select>
+        </label>
+        <label className="block min-w-0 lg:w-64">
+          <span className="mb-1 block text-[13px] font-semibold text-ink-soft">Tipo de pesca</span>
+          <select className={`${selectCls} ${type ? 'border-sea bg-sea-50 font-semibold text-sea-dark' : ''}`} value={type ?? ''} onChange={(e) => setType(e.target.value || null)}>
+            <option value="">Todas</option>
+            {FISHING_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+          </select>
+        </label>
       </div>
       <OutingsCalendar list={list} filtered={!!(port || type)} day={q.get('dia')} onDay={(d) => set({ dia: d })} />
+    </div>
+  )
+}
+
+const selectCls = 'w-full min-w-0 rounded-xl border border-line bg-white px-3 py-3 text-[15px] text-ink focus:border-sea focus:outline-none focus:ring-2 focus:ring-sea/20'
+
+/** Ayuda de 3 pasos para quien entra por primera vez. Se oculta con "Entendido" (se recuerda en este móvil). */
+function HowTo() {
+  const KEY = 'pescamigo-ayuda-reservar'
+  const [hidden, setHidden] = useState(() => {
+    try { return localStorage.getItem(KEY) === '1' } catch { return false }
+  })
+  if (hidden) return null
+  const close = () => {
+    try { localStorage.setItem(KEY, '1') } catch { /* sin almacenamiento */ }
+    setHidden(true)
+  }
+  return (
+    <div className="rounded-2xl border border-sea/20 bg-sea-50 p-4">
+      <p className="text-[15px] font-bold text-sea-dark">Reservar es muy fácil</p>
+      <ol className="mt-2 space-y-1.5 text-[15px] leading-snug text-ink">
+        <li><b>1.</b> Toca un día marcado en azul en el calendario.</li>
+        <li><b>2.</b> Pulsa el botón naranja <b>Solicitar plaza</b>.</li>
+        <li><b>3.</b> El patrón te confirma y os escribís por el chat.</li>
+      </ol>
+      <button type="button" onClick={close} className="mt-3 rounded-xl bg-white px-4 py-2 text-sm font-semibold text-sea-dark shadow-sm">Entendido</button>
     </div>
   )
 }
@@ -199,6 +227,7 @@ function OutingsCalendar({ list, filtered, day, onDay }: { list: Outing[]; filte
   return (
     <div className="flex-1 overflow-y-auto p-4 lg:p-6">
       <div className="mx-auto grid max-w-5xl gap-5 lg:grid-cols-[380px_minmax(0,1fr)] lg:items-start lg:gap-6">
+        <div className="lg:col-span-2"><HowTo /></div>
         <div className="rounded-2xl border border-line bg-white p-3 sm:p-4 lg:sticky lg:top-0">
           <div className="mb-3 flex items-center justify-between gap-2">
             <button type="button" onClick={() => move(-1)} disabled={monthsAhead <= 0} aria-label="Mes anterior" className="grid h-9 w-9 place-items-center rounded-full hover:bg-foam disabled:opacity-30 disabled:hover:bg-transparent">

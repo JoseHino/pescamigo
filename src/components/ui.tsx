@@ -52,8 +52,8 @@ export function Header({ title, back, right, sub }: { title: string; back?: bool
   return (
     <header className="flex h-14 shrink-0 items-center gap-2 border-b border-line bg-white px-3 lg:h-16 lg:px-6">
       {back && (
-        <button onClick={() => nav(-1)} aria-label="Volver" className="grid h-10 w-10 shrink-0 place-items-center rounded-full hover:bg-foam">
-          <ArrowLeft size={20} />
+        <button onClick={() => nav(-1)} className="flex h-10 shrink-0 items-center gap-1 rounded-full pl-1.5 pr-3 text-[15px] font-semibold text-sea hover:bg-foam">
+          <ArrowLeft size={20} /> Volver
         </button>
       )}
       <div className={`min-w-0 flex-1 ${back ? '' : 'pl-2'}`}>
