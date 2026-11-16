@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { MessageCircle, SendHorizontal } from 'lucide-react'
-import { Empty, ErrorMsg, Header, SocialLinks } from '../components/ui'
+import { Empty, ErrorMsg, Header } from '../components/ui'
 import { NotFound } from './explore'
 import { isUnread, loadMessages, markConversationRead, sendMessage, useAppState, useMe } from '../data/store'
 import { ago, clock, dayLabel } from '../lib/format'
@@ -124,11 +124,6 @@ export function Chat() {
         back
         right={outing ? <Link to={`/salida/${outing.id}`} className="shrink-0 rounded-lg px-2 py-1 text-[13px] font-semibold text-sea">Ver salida</Link> : undefined}
       />
-      {other?.role === 'fisher' && other.links.length > 0 && (
-        <div className="shrink-0 border-b border-line bg-white px-4 py-2 lg:px-6">
-          <SocialLinks links={other.links} />
-        </div>
-      )}
       <div className="col flex-1 space-y-2.5 overflow-y-auto bg-foam px-3 py-4">
         {messages.map((m) => {
           if (m.isSystem) {

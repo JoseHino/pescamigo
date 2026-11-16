@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { Anchor, Bell, ChevronRight, CreditCard, FileText, Fish, LayoutDashboard, LogOut, Pencil, Plus, Smartphone } from 'lucide-react'
-import { Button, Chip, Empty, ErrorMsg, Header, LinksInput, OwnerBadge, Photo } from '../components/ui'
-import { markNoticesRead, myBoats, payoutAccount, saveLinks, setNotifyEmail, signOut, updatePrefs, useAppState, useMe } from '../data/store'
+import { Button, Chip, Empty, ErrorMsg, Header, OwnerBadge, Photo } from '../components/ui'
+import { markNoticesRead, myBoats, payoutAccount, setNotifyEmail, signOut, updatePrefs, useAppState, useMe } from '../data/store'
 import { PORTS, portById } from '../data/seed'
 import { FISHING_TYPES, HABITUAL_MIN, SUPER_MIN, ago } from '../lib/format'
 import { disablePush, enablePush, pushState, type PushState } from '../lib/push'
@@ -170,19 +170,6 @@ function OwnerLevelCard({ ownerId }: { ownerId: string }) {
   )
 }
 
-/** Enlaces del pescador a sus redes: los ven los patrones junto a su nombre. */
-function LinksEditor({ links }: { links: string[] }) {
-  return (
-    <section className="space-y-3 rounded-2xl border border-line bg-white p-4">
-      <div>
-        <h2 className="text-sm font-bold">Tus redes</h2>
-        <p className="text-xs text-ink-soft">Enlaces a tu Instagram, TikTok o YouTube. Son públicos: los patrones los verán junto a tu nombre cuando pidas plaza.</p>
-      </div>
-      <LinksInput links={links} onChange={saveLinks} />
-    </section>
-  )
-}
-
 export function Profile() {
   const nav = useNavigate()
   const s = useAppState()
@@ -212,10 +199,9 @@ export function Profile() {
           </div>
         </div>
         <p className="-mt-2 px-1 text-xs text-ink-soft">
-          {me.links.length ? 'Los demás ven tu nombre y tus redes.' : 'Los demás solo ven tu nombre.'} Tu correo no se muestra a nadie.
+          Los demás solo ven tu nombre. Tu correo no se muestra a nadie.
         </p>
 
-        {me.role === 'fisher' && <LinksEditor links={me.links} />}
 
         {me.role === 'owner' && (
           <section className="space-y-3 rounded-2xl border border-line bg-white p-4">

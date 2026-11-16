@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
-import { BadgeCheck, CalendarX, CreditCard, HandCoins, LifeBuoy, ShieldCheck, Star, Users } from 'lucide-react'
+import { BadgeCheck, CalendarX, CreditCard, HandCoins, LifeBuoy, MessageCircle, ShieldCheck, Star, Users } from 'lucide-react'
 import { Header } from '../components/ui'
 import { useAppState } from '../data/store'
 
@@ -44,7 +44,8 @@ function Section({ icon, title, children }: { icon: ReactNode; title: string; ch
 /** Condiciones de uso y garantía, en lenguaje claro. Pública: se puede leer sin cuenta. */
 export function Terms() {
   const s = useAppState()
-  const pct = s.settings.commissionPct
+  const { fisherFeePct: fp, ownerFeePct: op, regularFisherFeePct: rfp, regularOwnerFeePct: rop, regularAfter } = s.settings
+  const eur = (n: number) => n.toFixed(2).replace('.', ',')
   const h = s.settings.refundCutoffHours
   return (
     <div className="flex h-full flex-col bg-foam">
@@ -81,12 +82,16 @@ export function Terms() {
 
         <Section icon={<HandCoins size={19} />} title="Precio y gestión de la plataforma">
           <p>
-            El precio por plaza que ves es lo que pagas: no hay gastos añadidos. De ese importe, el {fmtPct(100 - pct)} % es para el patrón,
-            como reparto de los gastos de la salida, y el {fmtPct(pct)} % es para Pescamigo por la gestión de la plataforma: la app,
-            el pago seguro, la garantía de devolución y la atención. Pescamigo es la única parte que cobra por su trabajo.
+            El patrón pone el reparto de gastos de cada plaza (combustible, cebo, mantenimiento…). Pescamigo cobra por la gestión
+            de la plataforma —la app, el pago seguro, la garantía de devolución y la atención—: un {fmtPct(fp)} % que paga el pescador
+            sobre el reparto y un {fmtPct(op)} % que se descuenta al patrón. Pescamigo es la única parte que cobra por su trabajo.
           </p>
           <p className="text-ink-soft">
-            Ejemplo: en una plaza de 30 €, el patrón recibe {(30 * (100 - pct) / 100).toFixed(2).replace('.', ',')} € y Pescamigo {(30 * pct / 100).toFixed(2).replace('.', ',')} €.
+            Ejemplo: con un reparto de 30 € por plaza, el pescador paga {eur(30 + 30 * fp / 100)} €, el patrón recibe {eur(30 - 30 * op / 100)} € y Pescamigo {eur(30 * (fp + op) / 100)} €.
+          </p>
+          <p>
+            <b>Compañeros habituales:</b> a partir de la salida número {regularAfter + 1} con el mismo patrón, la gestión baja al {fmtPct(rfp)} % para el pescador
+            y al {fmtPct(rop)} % para el patrón. Salir juntos por Pescamigo os sale cada vez mejor.
           </p>
           <p className="text-ink-soft">
             En los barcos que todavía no cobran con tarjeta, el reparto de gastos se paga en efectivo al patrón el día de la salida y Pescamigo no cobra nada.
@@ -118,9 +123,17 @@ export function Terms() {
           </ul>
         </Section>
 
+        <Section icon={<MessageCircle size={19} />} title="Siempre a través de Pescamigo">
+          <ul>
+            <li>Antes de pagar, los teléfonos, correos y enlaces que se escriben en las solicitudes se ocultan. El chat con el patrón se abre al confirmar la plaza.</li>
+            <li>La garantía de devolución, el cobro asegurado y las valoraciones solo existen en las salidas reservadas y pagadas en Pescamigo. Una salida acordada por fuera no tiene ninguna de estas protecciones.</li>
+          </ul>
+        </Section>
+
         <Section icon={<Star size={19} />} title="Para patrones">
           <ul>
-            <li>Recibes el {fmtPct(100 - pct)} % del precio de cada plaza en tu cuenta bancaria después de cada salida, como reparto de los gastos. Pon un precio que cubra tus gastos, no una tarifa con beneficio.</li>
+            <li>Recibes el reparto de gastos de cada plaza, menos un {fmtPct(op)} % de gestión ({fmtPct(rop)} % con tus compañeros habituales), en tu cuenta bancaria después de cada salida. Pon un reparto que cubra tus gastos, no una tarifa con beneficio.</li>
+            <li><b>Cobro asegurado por plantón:</b> si el pescador no se presenta o cancela con menos de {h} horas, cobras tu parte igualmente.</li>
             <li>Para cobrar con tarjeta, completa tu cuenta de cobro desde tu perfil. Es un alta segura con Stripe que se hace una sola vez.</li>
             <li>Si cancelas una salida, devolvemos el dinero a los pescadores y esa salida no se cobra.</li>
           </ul>

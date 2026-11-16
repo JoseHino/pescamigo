@@ -11,7 +11,7 @@ const EMPTY = {
   users: [], boats: [], outings: [], bookings: [], reviews: [], notices: [],
   rules: [], blocked: [], conversations: [], messages: {}, tripCounts: {},
 }
-let state: State = { ready: false, me: null, settings: { commissionPct: 15, paymentsEnabled: false, refundCutoffHours: 24 }, ...EMPTY }
+let state: State = { ready: false, me: null, settings: { commissionPct: 15, paymentsEnabled: false, refundCutoffHours: 24, fisherFeePct: 10, ownerFeePct: 5, regularFisherFeePct: 5, regularOwnerFeePct: 3, regularAfter: 2 }, ...EMPTY }
 const listeners = new Set<() => void>()
 
 function commit(patch: Partial<State>) {
@@ -117,6 +117,7 @@ const toBooking = (r: any): Booking => ({
   amountTotal: Number(r.amount_total), commissionPct: Number(r.commission_pct), commissionAmount: Number(r.commission_amount),
   ownerAmount: Number(r.owner_amount), paymentMethod: r.payment_method, paymentStatus: r.payment_status,
   reason: r.reason, cancelledBy: r.cancelled_by,
+  baseAmount: Number(r.base_amount ?? r.amount_total), fisherFee: Number(r.fisher_fee ?? 0), ownerFee: Number(r.owner_fee ?? 0),
   payBy: r.pay_by ?? null, refundStatus: r.refund_status ?? 'none', payoutStatus: r.payout_status ?? 'none', createdAt: r.created_at, updatedAt: r.updated_at,
 })
 const toNotice = (r: any): Notice => ({
@@ -150,7 +151,7 @@ export function refresh(): Promise<void> {
       supabase.from('bookings').select('*'),
       supabase.from('reviews').select('*').order('created_at', { ascending: false }),
       supabase.from('notifications').select('*').order('created_at', { ascending: false }).limit(60),
-      supabase.from('app_settings').select('commission_pct,payments_enabled,refund_cutoff_hours').maybeSingle(),
+      supabase.from('app_settings').select('commission_pct,payments_enabled,refund_cutoff_hours,fisher_fee_pct,owner_fee_pct,regular_fisher_fee_pct,regular_owner_fee_pct,regular_after').maybeSingle(),
       supabase.from('outing_rules').select('*').eq('active', true),
       supabase.from('boat_blocked_days').select('boat_id,day').gte('day', isoDate(new Date())),
       supabase.from('conversations').select('*').order('last_message_at', { ascending: false }),
@@ -166,6 +167,11 @@ export function refresh(): Promise<void> {
         commissionPct: Number(settings.data?.commission_pct ?? 15),
         paymentsEnabled: !!settings.data?.payments_enabled,
         refundCutoffHours: Number(settings.data?.refund_cutoff_hours ?? 24),
+        fisherFeePct: Number(settings.data?.fisher_fee_pct ?? 10),
+        ownerFeePct: Number(settings.data?.owner_fee_pct ?? 5),
+        regularFisherFeePct: Number(settings.data?.regular_fisher_fee_pct ?? 5),
+        regularOwnerFeePct: Number(settings.data?.regular_owner_fee_pct ?? 3),
+        regularAfter: Number(settings.data?.regular_after ?? 2),
       },
       boats: (boats.data ?? []).map(toBoat),
       outings: (outings.data ?? []).map(toOuting),
@@ -534,6 +540,22 @@ async function callPagos(body: Record<string, unknown>): Promise<{ ok: boolean; 
   } catch {
     return { ok: false, data: {} }
   }
+}
+
+/** Pescador y patrón ya han hecho juntos las salidas necesarias para la tarifa de compañeros habituales. */
+export function isRegular(s: State, fisherId: string, ownerId: string) {
+  const done = s.bookings.filter((b) => {
+    if (b.fisherId !== fisherId || b.status !== 'confirmed') return false
+    const o = s.outings.find((x) => x.id === b.outingId)
+    const boat = o && s.boats.find((x) => x.id === o.boatId)
+    return !!o && !!boat && boat.ownerId === ownerId && o.status !== 'cancelled' && isPast(o)
+  }).length
+  return done >= s.settings.regularAfter
+}
+
+/** Gestión de la plataforma que paga el pescador (%), según sea o no compañero habitual del patrón. */
+export function fisherFeePct(s: State, fisherId: string, ownerId: string) {
+  return isRegular(s, fisherId, ownerId) ? s.settings.regularFisherFeePct : s.settings.fisherFeePct
 }
 
 /** Lleva al pescador a la página de pago segura de Stripe. Devuelve un error o nada (si redirige). */

@@ -8,7 +8,7 @@ import {
   Button, Chip, Empty, ErrorMsg, Header, OutingTicket, OwnerBadge, Photo, PhotoViewer, Rating, SectionTitle, SocialLinks, Stars, StatusBadge,
 } from '../components/ui'
 import {
-  boatRating, bookingWindow, canBook, conversationFor, fisherOutings, myActiveBooking, paysByCard, refresh, seatsLeft, upcomingOutings, useAppState, useMe,
+  boatRating, bookingWindow, canBook, conversationFor, fisherFeePct, fisherOutings, myActiveBooking, paysByCard, refresh, seatsLeft, upcomingOutings, useAppState, useMe,
 } from '../data/store'
 import { Guarantee } from './legal'
 import { LIVE_MAX_AGE, startLive, stopLive, useLive } from '../lib/live'
@@ -386,8 +386,9 @@ export function OutingDetail() {
   const chat = mine ? conversationFor(s, mine.id) : null
   const win = bookingWindow(boat, o)
   const isOwner = boat.ownerId === me.id
-  const { commissionPct } = s.settings
   const card = paysByCard(s, boat)
+  const feePct = fisherFeePct(s, me.id, boat.ownerId)
+  const fee = Math.round(o.costShare * feePct) / 100
 
   const rows = [
     { icon: Clock, label: 'Horario', value: `${o.start} – ${o.end} (${duration(o.start, o.end)})` },
@@ -456,11 +457,11 @@ export function OutingDetail() {
               <span className="min-w-0 flex-1 text-sm">
                 {card ? 'Pago con tarjeta en la app cuando el patrón acepte' : 'Reparto de gastos, en efectivo al patrón el día de la salida'}
               </span>
-              <b className="tnum shrink-0">{euro(o.costShare)}</b>
+              <b className="tnum shrink-0">{euro(card ? o.costShare + fee : o.costShare)}</b>
             </div>
             <p className="mt-2 text-xs text-ink-soft">
               {card
-                ? `Precio final, sin gastos añadidos. Incluye la gestión de la plataforma Pescamigo (${String(commissionPct).replace('.', ',')} %). Pedir plaza es gratis.`
+                ? `${euro(o.costShare)} de reparto de gastos + ${euro(fee)} de gestión de la plataforma (${String(feePct).replace('.', ',')} %). Pedir plaza es gratis.`
                 : 'Solicitar plaza en Pescamigo es gratis.'}
             </p>
           </div>

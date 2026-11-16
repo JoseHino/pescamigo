@@ -4,7 +4,7 @@ import { Camera, CheckCircle2, CreditCard, MessageCircle, Minus, Plus, Send, Sta
 import { Button, Empty, ErrorMsg, Field, Header, Notice, OutingTicket, Photo, SectionTitle, StatusBadge, inputCls } from '../components/ui'
 import { NotFound } from './explore'
 import {
-  addReview, bookingWindow, cancelBooking, conversationFor, isPast, myActiveBooking, payBooking, paysByCard, refresh, requestBooking,
+  addReview, bookingWindow, cancelBooking, conversationFor, isPast, myActiveBooking, fisherFeePct, isRegular, payBooking, paysByCard, refresh, requestBooking,
   seatsLeft, useAppState, useMe,
 } from '../data/store'
 import { Guarantee } from './legal'
@@ -13,34 +13,38 @@ import { euro, longDate, shortDate, toDate } from '../lib/format'
 import { fileToDataUrl } from '../lib/image'
 import type { Booking, Outing } from '../types'
 
-/** Desglose de lo que se paga. Con pagos en la app muestra la comisión; si no, el pago en efectivo. */
-export function PriceBreakdown({ total, pct, card }: { total: number; pct: number; card: boolean }) {
+/** Desglose de lo que se paga. Con tarjeta: reparto de gastos + gestión de la plataforma; si no, efectivo al patrón. */
+export function PriceBreakdown({ base, pct, card, regular }: { base: number; pct: number; card: boolean; regular: boolean }) {
   if (!card) {
     return (
       <div className="space-y-2 text-sm">
         <div className="flex justify-between gap-3">
           <span>Reparto de gastos</span>
-          <b className="tnum shrink-0">{euro(total)}</b>
+          <b className="tnum shrink-0">{euro(base)}</b>
         </div>
         <p className="text-xs text-ink-soft">Se paga en efectivo al patrón el día de la salida. Solicitar plaza en Pescamigo es gratis.</p>
       </div>
     )
   }
-  const commission = Math.round(total * pct) / 100
+  const fee = Math.round(base * pct) / 100
   return (
     <div className="space-y-2 text-sm">
       <div className="flex justify-between gap-3">
-        <span>Total que pagas (precio final)</span>
-        <b className="tnum shrink-0">{euro(total)}</b>
+        <span>Reparto de gastos de la salida</span>
+        <span className="tnum shrink-0">{euro(base)}</span>
       </div>
-      <div className="flex justify-between gap-3 text-ink-soft">
-        <span>Gestión de la plataforma Pescamigo ({String(pct).replace('.', ',')} %)</span>
-        <span className="tnum shrink-0">{euro(commission)}</span>
+      <div className="flex justify-between gap-3">
+        <span>Gestión de la plataforma ({String(pct).replace('.', ',')} %)</span>
+        <span className="tnum shrink-0">{euro(fee)}</span>
       </div>
-      <div className="flex justify-between gap-3 text-ink-soft">
-        <span>Para el patrón (gastos compartidos de la salida)</span>
-        <span className="tnum shrink-0">{euro(total - commission)}</span>
+      <div className="flex justify-between gap-3 border-t border-line pt-2 text-[15px]">
+        <b>Total que pagas</b>
+        <b className="tnum shrink-0">{euro(base + fee)}</b>
       </div>
+      {regular && (
+        <p className="rounded-lg bg-ok-50 px-2.5 py-1.5 text-xs font-semibold text-ok">Tarifa de compañeros habituales: ya habéis salido juntos, pagas menos gestión.</p>
+      )}
+      <p className="text-xs text-ink-soft">Con la garantía de devolución: si la salida no se hace, te devolvemos el total.</p>
     </div>
   )
 }
@@ -61,8 +65,9 @@ export function Checkout() {
   if (!o || !boat || !me) return <NotFound what="Esta salida ya no está disponible." />
   const left = seatsLeft(s, o)
   const port = portById(o.portId)
-  const { commissionPct } = s.settings
   const card = paysByCard(s, boat)
+  const regular = isRegular(s, me.id, boat.ownerId)
+  const feePct = fisherFeePct(s, me.id, boat.ownerId)
 
   if (done) {
     return (
@@ -117,10 +122,10 @@ export function Checkout() {
           </div>
 
           <div className="rounded-2xl border border-line bg-white p-4">
-            <PriceBreakdown total={o.costShare * seats} pct={commissionPct} card={card} />
+            <PriceBreakdown base={o.costShare * seats} pct={feePct} card={card} regular={regular} />
           </div>
 
-          <Field label="Mensaje para el patrón (opcional)" hint="Por ejemplo, tu experiencia pescando o si llevas tu propio equipo.">
+          <Field label="Mensaje para el patrón (opcional)" hint="Por ejemplo, tu experiencia pescando o si llevas tu propio equipo. Los teléfonos y correos se ocultan: el chat se abre al confirmar la plaza.">
             <textarea className={`${inputCls} min-h-20 resize-none`} maxLength={500} value={message} onChange={(e) => setMessage(e.target.value)} />
           </Field>
 

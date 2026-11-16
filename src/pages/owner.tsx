@@ -5,7 +5,7 @@ import {
   Settings2, Wallet, X,
 } from 'lucide-react'
 import {
-  Button, Chip, Empty, ErrorMsg, Field, Header, LinksInput, Notice, OutingTicket, Photo, SectionTitle, SocialLinks, StatusBadge, inputCls,
+  Button, Chip, Empty, ErrorMsg, Field, Header, LinksInput, Notice, OutingTicket, Photo, SectionTitle, StatusBadge, inputCls,
 } from '../components/ui'
 import { NotFound } from './explore'
 import {
@@ -89,7 +89,6 @@ function RequestCard({ b }: { b: Booking }) {
   const boat = o ? s.boats.find((x) => x.id === o.boatId) : undefined
   if (!o || !boat) return null
   const left = seatsLeft(s, o)
-  const fisherLinks = s.users.find((u) => u.id === b.fisherId)?.links ?? []
   return (
     <article className="min-w-0 space-y-3 rounded-2xl border border-line bg-white p-4">
       <div className="flex items-start justify-between gap-3">
@@ -99,16 +98,15 @@ function RequestCard({ b }: { b: Booking }) {
             Pide <b className="text-ink">{b.seats} {b.seats === 1 ? 'plaza' : 'plazas'}</b> · quedan {left}
           </p>
         </div>
-        <span className="tnum shrink-0 text-[15px] font-bold">{euro(b.amountTotal)}</span>
+        <span className="tnum shrink-0 text-[15px] font-bold">{euro(b.baseAmount)}</span>
       </div>
-      <SocialLinks links={fisherLinks} />
       <Link to={`/salida-editar/${o.id}`} className="block rounded-xl bg-foam px-3 py-2 text-[13px]">
         <span className="font-semibold">{dayLabel(o.date)}, {o.start} – {o.end}</span>
         <span className="block truncate text-ink-soft">{boat.name} · {portById(o.portId).name}</span>
       </Link>
       {b.message && <p className="wrap-anywhere whitespace-pre-line rounded-xl border border-line px-3 py-2 text-[13px]">«{b.message}»</p>}
-      {b.commissionAmount > 0 && (
-        <p className="text-xs text-ink-soft">Recibirás {euro(b.ownerAmount)} (gestión de la plataforma Pescamigo: {euro(b.commissionAmount)}).</p>
+      {b.ownerFee > 0 && (
+        <p className="text-xs text-ink-soft">Recibirás {euro(b.ownerAmount)} de {euro(b.baseAmount)} de reparto (gestión de la plataforma: {euro(b.ownerFee)}).</p>
       )}
       <RequestActions b={b} />
     </article>
@@ -713,7 +711,7 @@ export function OutingEdit() {
                       <span className="min-w-0 truncate text-sm font-bold">{userName(s, b.fisherId)}</span>
                       <StatusBadge status={b.status} />
                     </div>
-                    <p className="text-[13px] text-ink-soft">{b.seats} {b.seats === 1 ? 'plaza' : 'plazas'} · {euro(b.amountTotal)}</p>
+                    <p className="text-[13px] text-ink-soft">{b.seats} {b.seats === 1 ? 'plaza' : 'plazas'} · {euro(b.baseAmount)}</p>
                     {b.message && <p className="wrap-anywhere whitespace-pre-line text-[13px]">«{b.message}»</p>}
                     {b.reason && b.status !== 'pending' && <p className="wrap-anywhere text-[13px] text-ink-soft">Motivo: {b.reason}</p>}
                     {b.status === 'pending' && editable && <RequestActions b={b} />}
@@ -783,7 +781,7 @@ export function Income() {
     .filter((b) => b.status === 'confirmed' || b.status === 'accepted')
     .map((b) => ({ b, o: s.outings.find((o) => o.id === b.outingId)!, boat: s.boats.find((x) => x.id === s.outings.find((o) => o.id === b.outingId)?.boatId) }))
     .sort((a, z) => (z.o.date + z.o.start).localeCompare(a.o.date + a.o.start))
-  const sum = (k: 'amountTotal' | 'commissionAmount' | 'ownerAmount') => rows.reduce((n, r) => n + r.b[k], 0)
+  const sum = (k: 'baseAmount' | 'ownerFee' | 'ownerAmount') => rows.reduce((n, r) => n + r.b[k], 0)
   const { paymentsEnabled, commissionPct } = s.settings
 
   return (
@@ -799,8 +797,8 @@ export function Income() {
         )}
         <div className="grid grid-cols-3 gap-2">
           {[
-            { l: 'Reparto total', v: sum('amountTotal') },
-            { l: 'Plataforma', v: sum('commissionAmount') },
+            { l: 'Reparto', v: sum('baseAmount') },
+            { l: 'Plataforma', v: sum('ownerFee') },
             { l: 'Para ti', v: sum('ownerAmount') },
           ].map((t) => (
             <div key={t.l} className="min-w-0 rounded-2xl border border-line bg-white p-3">
@@ -828,7 +826,7 @@ export function Income() {
                 </div>
                 <div className="shrink-0 text-right">
                   <p className="tnum text-sm font-bold">{euro(b.ownerAmount)}</p>
-                  {b.commissionAmount > 0 && <p className="tnum text-xs text-ink-soft">de {euro(b.amountTotal)}</p>}
+                  {b.ownerFee > 0 && <p className="tnum text-xs text-ink-soft">de {euro(b.baseAmount)}</p>}
                 </div>
               </li>
             ))}

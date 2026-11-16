@@ -82,6 +82,10 @@ export interface Booking {
   ownerAmount: number
   paymentMethod: 'cash' | 'card'
   paymentStatus: 'none' | 'authorized' | 'paid' | 'refunded' | 'failed'
+  /** Reparto de gastos (lo que se divide entre las plazas) y gestión de la plataforma por cada lado. */
+  baseAmount: number
+  fisherFee: number
+  ownerFee: number
   /** Plazo para pagar una plaza aceptada (pago con tarjeta). */
   payBy: string | null
   refundStatus: 'none' | 'due' | 'done' | 'failed'
@@ -157,6 +161,13 @@ export interface Settings {
   paymentsEnabled: boolean
   /** Cancelando con al menos estas horas de antelación se devuelve el 100 %. */
   refundCutoffHours: number
+  /** Gestión de la plataforma: % que paga el pescador sobre el reparto y % que se descuenta al patrón. */
+  fisherFeePct: number
+  ownerFeePct: number
+  /** Tarifa de compañeros habituales, a partir de regularAfter salidas hechas juntos. */
+  regularFisherFeePct: number
+  regularOwnerFeePct: number
+  regularAfter: number
 }
 
 export interface State {
