@@ -1,19 +1,20 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import {
-  BadgeCheck, Banknote, CalendarX, Check, ChevronLeft, ChevronRight, Clock, Images, MapPin, MessageCircle, Repeat, Ruler, ShieldCheck, Users, X,
+  BadgeCheck, Banknote, LocateFixed, LocateOff, CalendarX, Check, ChevronLeft, ChevronRight, Clock, Images, MapPin, MessageCircle, Repeat, Ruler, ShieldCheck, Users, X,
 } from 'lucide-react'
 import MapView from '../components/MapView'
 import {
-  Button, Chip, Empty, Header, OutingTicket, OwnerBadge, Photo, PhotoViewer, Rating, SectionTitle, SocialLinks, Stars, StatusBadge,
+  Button, Chip, Empty, ErrorMsg, Header, OutingTicket, OwnerBadge, Photo, PhotoViewer, Rating, SectionTitle, SocialLinks, Stars, StatusBadge,
 } from '../components/ui'
 import {
-  boatRating, bookingWindow, canBook, conversationFor, fisherOutings, myActiveBooking, paysByCard, seatsLeft, upcomingOutings, useAppState, useMe,
+  boatRating, bookingWindow, canBook, conversationFor, fisherOutings, myActiveBooking, paysByCard, refresh, seatsLeft, upcomingOutings, useAppState, useMe,
 } from '../data/store'
 import { Guarantee } from './legal'
+import { LIVE_MAX_AGE, startLive, stopLive, useLive } from '../lib/live'
 import { PORTS, portById } from '../data/seed'
-import { BOAT_EQUIPMENT, FISHING_TYPES, WEEKDAYS, dayLabel, duration, euro, isoDate, longDate, monthLabel, shortDate } from '../lib/format'
-import type { Outing } from '../types'
+import { BOAT_EQUIPMENT, FISHING_TYPES, WEEKDAYS, ago, dayLabel, duration, euro, isoDate, longDate, monthLabel, shortDate } from '../lib/format'
+import type { Boat, Outing } from '../types'
 
 export function MapPage() {
   const s = useAppState()
@@ -28,6 +29,13 @@ export function MapPage() {
   )
   const boat = s.boats.find((b) => b.id === sel)
   const next = boat ? upcoming.find((o) => o.boatId === boat.id) : null
+  const isLive = (b: Boat) => !!b.live && Date.now() - new Date(b.live.at).getTime() < LIVE_MAX_AGE
+  const anyLive = s.boats.some(isLive)
+  // Con el mapa abierto se recargan los barcos cada 30 s para ver moverse a los que van en directo.
+  useEffect(() => {
+    const t = window.setInterval(() => void refresh(), 30000)
+    return () => window.clearInterval(t)
+  }, [])
 
   return (
     <div className="relative h-full">
@@ -36,7 +44,13 @@ export function MapPage() {
         <div className="pointer-events-auto inline-flex items-center gap-2 rounded-full bg-white px-3.5 py-2 text-[13px] font-semibold shadow-md">
           <span className="h-2.5 w-2.5 rounded-full bg-buoy" /> Con salida publicada
         </div>
+        {anyLive && (
+          <div className="pointer-events-auto ml-2 inline-flex items-center gap-2 rounded-full bg-white px-3.5 py-2 text-[13px] font-semibold shadow-md">
+            <span className="h-2.5 w-2.5 rounded-full bg-ok" /> En directo
+          </div>
+        )}
       </div>
+      {me?.role === 'owner' && !boat && <LiveButton />}
       {s.boats.length === 0 && (
         <div className="absolute inset-x-3 bottom-3 z-[500] rounded-2xl bg-white p-4 shadow-xl lg:inset-x-auto lg:bottom-5 lg:left-5 lg:w-[380px]">
           <p className="text-[15px] font-bold">Todavía no hay barcos en el mapa</p>
@@ -58,9 +72,15 @@ export function MapPage() {
                 <OwnerBadge ownerId={boat.ownerId} size="sm" />
               </p>
               <p className="truncate text-xs text-ink-soft">{boat.model}</p>
-              <p className="mt-1 flex min-w-0 items-center gap-1 text-xs text-ink-soft">
-                <MapPin size={12} className="shrink-0" /> <span className="truncate">{portById(boat.portId).name}</span>
-              </p>
+              {isLive(boat) ? (
+                <p className="mt-1 flex min-w-0 items-center gap-1 text-xs font-semibold text-ok">
+                  <span className="h-2 w-2 shrink-0 rounded-full bg-ok" /> <span className="truncate">En directo · {ago(boat.live!.at)}</span>
+                </p>
+              ) : (
+                <p className="mt-1 flex min-w-0 items-center gap-1 text-xs text-ink-soft">
+                  <MapPin size={12} className="shrink-0" /> <span className="truncate">{portById(boat.portId).name}</span>
+                </p>
+              )}
               <div className="mt-1"><Rating boatId={boat.id} /></div>
             </div>
           </Link>
@@ -81,6 +101,43 @@ export function MapPage() {
           </div>
         </div>
       )}
+    </div>
+  )
+}
+
+/** Botón del patrón en el Mapa: compartir la ubicación de su barco para que los demás lo vean donde está. */
+function LiveButton() {
+  const s = useAppState()
+  const me = useMe()
+  const live = useLive()
+  const mine = me ? s.boats.filter((b) => b.ownerId === me.id) : []
+  const [boatId, setBoatId] = useState<string>(mine[0]?.id ?? '')
+  if (!mine.length) return null
+  const on = !!live.boatId
+  const sharedBoat = mine.find((b) => b.id === live.boatId)
+  return (
+    <div className="absolute inset-x-3 bottom-3 z-[500] space-y-2 rounded-2xl bg-white p-3 shadow-xl lg:inset-x-auto lg:bottom-5 lg:left-5 lg:w-[380px]">
+      {on ? (
+        <>
+          <p className="flex items-center gap-2 text-[15px] font-bold text-ok">
+            <span className="relative flex h-3 w-3"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-ok opacity-60" /><span className="relative inline-flex h-3 w-3 rounded-full bg-ok" /></span>
+            Compartiendo la ubicación de {sharedBoat?.name ?? 'tu barco'}
+          </p>
+          <p className="text-[13px] text-ink-soft">Los pescadores ven tu barco donde estás ahora. Funciona mientras tengas la app abierta.</p>
+          <Button full variant="outline" onClick={() => void stopLive()}><LocateOff size={18} /> Dejar de compartir</Button>
+        </>
+      ) : (
+        <>
+          {mine.length > 1 && (
+            <select className={selectCls} value={boatId} onChange={(e) => setBoatId(e.target.value)} aria-label="Barco">
+              {mine.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+            </select>
+          )}
+          <Button full onClick={() => startLive(boatId || mine[0].id)}><LocateFixed size={18} /> Compartir mi ubicación</Button>
+          <p className="text-[13px] text-ink-soft">Tu barco aparecerá en el mapa donde estás, en vez de en su puerto. El móvil te pedirá permiso la primera vez.</p>
+        </>
+      )}
+      <ErrorMsg>{live.error}</ErrorMsg>
     </div>
   )
 }

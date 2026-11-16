@@ -46,6 +46,8 @@ export interface Boat {
   bookMinHours: number // las reservas se cierran X horas antes
   links: string[] // redes del barco (Instagram, TikTok, web…), siempre https
   equipment: string[] // lo que hay a bordo (sonda, vivero…)
+  /** Posición en directo compartida por el patrón (o null). */
+  live: { lat: number; lng: number; at: string } | null
   createdAt: string
 }
 

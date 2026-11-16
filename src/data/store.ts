@@ -105,6 +105,7 @@ const toBoat = (r: any): Boat => ({
   insuranceDeclared: r.insurance_declared, licenseDeclared: r.license_declared,
   bookMaxDays: r.book_max_days, bookMinHours: r.book_min_hours,
   links: r.links ?? [], equipment: r.equipment ?? [], createdAt: r.created_at ?? '',
+  live: r.live_at && r.live_lat != null ? { lat: Number(r.live_lat), lng: Number(r.live_lng), at: r.live_at } : null,
 })
 const hm = (t: string) => String(t).slice(0, 5)
 const toOuting = (r: any): Outing => ({
@@ -386,7 +387,7 @@ export function markNoticesRead(userId: string) {
 
 /* ---------- propietario: barcos ---------- */
 
-export async function saveBoat(id: string | null, d: Omit<Boat, 'id' | 'ownerId' | 'createdAt'>): Promise<{ error?: string; id?: string }> {
+export async function saveBoat(id: string | null, d: Omit<Boat, 'id' | 'ownerId' | 'createdAt' | 'live'>): Promise<{ error?: string; id?: string }> {
   const me = state.me
   if (!me) return { error: GENERIC }
   let photos: string[]
