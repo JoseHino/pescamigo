@@ -11,6 +11,7 @@ import { BoatEdit, CalendarPage, Income, OutingEdit, Panel, Publish } from './pa
 import { Chat, Inbox } from './pages/chat'
 import { Alerts, Profile } from './pages/account'
 import { Terms } from './pages/legal'
+import { RequestTrip } from './pages/requests'
 import type { Role } from './types'
 
 function Frame({ children }: { children: ReactNode }) {
@@ -216,6 +217,7 @@ function Boot() {
         <Route element={<Tabs detail />}>
           <Route path="/reservar/:id" element={<Checkout />} />
           <Route path="/valorar/:id" element={<ReviewForm />} />
+          <Route path="/pedir-salida" element={<RequestTrip />} />
         </Route>
       </Route>
 

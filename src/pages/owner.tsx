@@ -8,6 +8,7 @@ import {
   Button, Chip, Empty, ErrorMsg, Field, Header, Notice, OutingTicket, Photo, SectionTitle, StatusBadge, inputCls,
 } from '../components/ui'
 import { NotFound } from './explore'
+import { OwnerTripRequests } from './requests'
 import {
   cancelOuting, conversationFor, createRule, deleteRule, isPast, myBoats, publishOuting, respondBooking, saveBoat, seatsLeft,
   setDayBlocked, updateOuting, useAppState, useMe,
@@ -217,6 +218,8 @@ export function Panel() {
             <div className="grid gap-3 lg:grid-cols-2 [&>*]:min-w-0">{pending.map((b) => <RequestCard key={b.id} b={b} />)}</div>
           )}
         </section>
+
+        <OwnerTripRequests />
 
         <section className="space-y-3">
           <SectionTitle count={upcoming.length} action={<Link to="/calendario" className="text-[13px] font-semibold text-sea">Calendario</Link>}>
@@ -466,21 +469,21 @@ export function CalendarPage() {
 /* ---------- Publicar (una fecha o cada semana) ---------- */
 
 export function Publish() {
-  const { me, boats } = useOwnerData()
+  const { s, me, boats } = useOwnerData()
   const nav = useNavigate()
   const [q] = useSearchParams()
   const initial = boats.find((b) => b.id === q.get('barco')) ?? boats[0]
   const [mode, setMode] = useState<'once' | 'weekly'>(q.get('habitual') ? 'weekly' : 'once')
   const [f, setF] = useState({
     boatId: initial?.id ?? '',
-    portId: initial?.portId ?? PORTS[0].id,
+    portId: (q.get('puerto') && PORTS.some((p) => p.id === q.get('puerto')) ? q.get('puerto')! : initial?.portId) ?? PORTS[0].id,
     date: q.get('fecha') ?? addDays(1),
     weekdays: [6] as number[],
     until: '',
     start: '07:00',
     end: '13:00',
-    seats: Math.min(2, initial?.capacity ?? 2),
-    type: 'Pesca a fondo',
+    seats: Math.min(Number(q.get('plazas')) || 2, initial?.capacity ?? 2),
+    type: q.get('tipo') && FISHING_TYPES.includes(q.get('tipo')!) ? q.get('tipo')! : 'Pesca a fondo',
     costShare: '20',
     notes: '',
   })
@@ -489,6 +492,10 @@ export function Publish() {
   const [busy, setBusy] = useState(false)
   if (!me) return null
   if (!boats.length) return <NoBoat title="Publicar salida" />
+  // Salida para la petición de un pescador ("Pide tu salida")
+  const request = s.tripRequests.find((r) => r.id === q.get('peticion')) ?? null
+  const requestId = request?.id ?? null
+  const requester = request ? s.users.find((u) => u.id === request.fisherId) : null
   const boat = boats.find((b) => b.id === f.boatId) ?? boats[0]
 
   const people = f.seats + 1 // los invitados y el patrón
@@ -504,7 +511,7 @@ export function Publish() {
     const base = { boatId: boat.id, portId: f.portId, start: f.start, end: f.end, seats: f.seats, type: f.type, costShare: parseMoney(f.costShare), notes: f.notes.trim() }
     setBusy(true)
     if (mode === 'once') {
-      const error = await publishOuting({ ...base, date: f.date })
+      const error = await publishOuting({ ...base, date: f.date }, requestId)
       setBusy(false)
       if (error) return setErr(error)
       nav('/panel')
@@ -527,7 +534,13 @@ export function Publish() {
       <Header title={mode === 'once' ? 'Publicar salida' : 'Salida habitual'} />
       <form onSubmit={submit} className="flex min-h-0 flex-1 flex-col">
         <div className="col flex-1 space-y-4 overflow-y-auto p-4 lg:py-6">
-          <div className="grid grid-cols-2 gap-1 rounded-xl bg-line/50 p-1" role="tablist" aria-label="Tipo de publicación">
+          {request && (
+            <p className="rounded-2xl bg-buoy-50 p-4 text-[14px] leading-snug text-buoy-dark">
+              <b>Salida para {requester?.name ?? 'un pescador'}</b>: busca salida el {longDate(request.day).toLowerCase()} para {request.seats} {request.seats === 1 ? 'persona' : 'personas'}
+              {request.types.length ? ` (${request.types.join(', ')})` : ''}. Al publicarla le avisaremos para que pida plaza.
+            </p>
+          )}
+          <div className={`grid grid-cols-2 gap-1 rounded-xl bg-line/50 p-1 ${request ? 'hidden' : ''}`} role="tablist" aria-label="Tipo de publicación">
             {(['once', 'weekly'] as const).map((m) => (
               <button key={m} type="button" role="tab" aria-selected={mode === m} onClick={() => setMode(m)}
                 className={`rounded-lg py-2 text-[13px] font-semibold ${mode === m ? 'bg-white text-ink shadow-sm' : 'text-ink-soft'}`}>

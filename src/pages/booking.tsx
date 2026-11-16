@@ -8,6 +8,7 @@ import {
   seatsLeft, useAppState, useMe,
 } from '../data/store'
 import { Guarantee } from './legal'
+import { MyTripRequests } from './requests'
 import { portById } from '../data/seed'
 import { euro, longDate, shortDate, toDate } from '../lib/format'
 import { fileToDataUrl } from '../lib/image'
@@ -277,6 +278,7 @@ export function Trips() {
             <button type="button" onClick={() => setQ({}, { replace: true })} className="mt-1 text-xs font-semibold text-ink-soft">Cerrar aviso</button>
           </div>
         )}
+        <div className="mb-7 space-y-7 empty:hidden"><MyTripRequests /></div>
         {mine.length === 0 ? (
           <Empty icon={<Ticket size={24} />} title="Todavía no has pedido plaza" text="Cuando solicites plaza en una salida aparecerá aquí con su estado."
             action={<Link to="/salidas" className="font-semibold text-sea">Ver salidas publicadas</Link>} />

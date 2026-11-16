@@ -9,7 +9,7 @@ import { disablePush, syncPush } from '../lib/push'
 
 const EMPTY = {
   users: [], boats: [], outings: [], bookings: [], reviews: [], notices: [],
-  rules: [], blocked: [], conversations: [], messages: {}, tripCounts: {},
+  rules: [], blocked: [], conversations: [], messages: {}, tripCounts: {}, tripRequests: [], tripOffers: [],
 }
 let state: State = { ready: false, me: null, settings: { commissionPct: 15, paymentsEnabled: false, refundCutoffHours: 24, fisherFeePct: 10, ownerFeePct: 5, regularFisherFeePct: 5, regularOwnerFeePct: 3, regularAfter: 2 }, ...EMPTY }
 const listeners = new Set<() => void>()
@@ -144,7 +144,7 @@ export function refresh(): Promise<void> {
   if (!state.me) return Promise.resolve()
   if (loading) return loading
   loading = (async () => {
-    const [users, boats, outings, bookings, reviews, notices, settings, rules, blocked, convs, trips] = await Promise.all([
+    const [users, boats, outings, bookings, reviews, notices, settings, rules, blocked, convs, trips, treqs, toffers] = await Promise.all([
       supabase.from('profiles').select('id,username,full_name,role,links,stripe_ready'),
       supabase.from('boats').select('*'),
       supabase.from('outings').select('*').gte('day', addDays(-120)),
@@ -156,6 +156,8 @@ export function refresh(): Promise<void> {
       supabase.from('boat_blocked_days').select('boat_id,day').gte('day', isoDate(new Date())),
       supabase.from('conversations').select('*').order('last_message_at', { ascending: false }),
       supabase.rpc('owner_trip_counts'),
+      supabase.from('trip_requests').select('*').order('day'),
+      supabase.from('trip_request_offers').select('request_id,outing_id,owner_id'),
     ])
     const failed = [users, boats, outings, bookings, reviews, notices, settings, rules, blocked, convs].some((r) => r.error)
     // Si alguna consulta falla (sin cobertura, por ejemplo) se conserva lo que ya había en pantalla.
@@ -187,6 +189,10 @@ export function refresh(): Promise<void> {
       blocked: (blocked.data ?? []).map((r: any) => ({ boatId: r.boat_id, day: r.day })),
       conversations: (convs.data ?? []).map(toConversation),
       // Si el recuento falla, se conservan las marcas que ya había: no impide cargar lo demás.
+      tripRequests: treqs.error ? state.tripRequests : (treqs.data ?? []).map((r: any) => ({
+        id: r.id, fisherId: r.fisher_id, day: r.day, ports: r.ports ?? [], types: r.types ?? [], seats: r.seats, message: r.message ?? '', status: r.status, createdAt: r.created_at,
+      })),
+      tripOffers: toffers.error ? state.tripOffers : (toffers.data ?? []).map((r: any) => ({ requestId: r.request_id, outingId: r.outing_id, ownerId: r.owner_id })),
       tripCounts: trips.error
         ? state.tripCounts
         : Object.fromEntries(((trips.data ?? []) as { owner_id: string; trips: number }[]).map((r) => [r.owner_id, r.trips])),
@@ -434,19 +440,36 @@ function checkOuting(boat: Boat | undefined, d: Omit<OutingInput, 'date' | 'boat
   return null
 }
 
-export async function publishOuting(d: OutingInput): Promise<string | null> {
+export async function publishOuting(d: OutingInput, requestId?: string | null): Promise<string | null> {
   const boat = state.boats.find((b) => b.id === d.boatId && b.ownerId === state.me?.id)
   const bad = checkOuting(boat, d)
   if (bad) return bad
   if (!d.date || d.date < isoDate(new Date())) return 'Elige una fecha de hoy en adelante.'
   if (toDate(d.date, d.start).getTime() < Date.now()) return 'Esa hora de salida ya ha pasado.'
-  const { error } = await supabase.from('outings').insert({
+  const { data, error } = await supabase.from('outings').insert({
     boat_id: d.boatId, port_id: d.portId, day: d.date, start_time: d.start, end_time: d.end, seats: d.seats,
     fishing_type: d.type, cost_share: d.costShare, notes: d.notes,
-  })
+  }).select('id').single()
   if (error) return dbError(error)
+  // Salida publicada para la petición de un pescador: se le avisa
+  if (requestId && data?.id) await supabase.rpc('offer_for_request', { p_request: requestId, p_outing: data.id })
   await refresh()
   return null
+}
+
+/* ---------- peticiones de salida ("Pide tu salida") ---------- */
+
+export async function createTripRequest(d: { day: string; ports: string[]; types: string[]; seats: number; message: string }): Promise<{ error?: string; notified?: number }> {
+  const { data, error } = await supabase.rpc('create_trip_request', { p_day: d.day, p_ports: d.ports, p_types: d.types, p_seats: d.seats, p_message: d.message })
+  if (error) return { error: dbError(error) ?? GENERIC }
+  await refresh()
+  return { notified: Number(data ?? 0) }
+}
+
+export async function closeTripRequest(id: string): Promise<string | null> {
+  const { error } = await supabase.rpc('close_trip_request', { p_request: id })
+  await refresh()
+  return dbError(error)
 }
 
 export async function createRule(

@@ -96,6 +96,20 @@ export interface Booking {
   updatedAt: string
 }
 
+/** Petición de salida de un pescador: un día, puertos y tipos de pesca; se avisa a los patrones. */
+export interface TripRequest {
+  id: string
+  fisherId: string
+  day: string
+  ports: string[]
+  types: string[]
+  seats: number
+  message: string
+  status: 'open' | 'closed'
+  createdAt: string
+}
+export interface TripOffer { requestId: string; outingId: string; ownerId: string }
+
 export interface Review {
   id: string
   boatId: string
@@ -186,4 +200,6 @@ export interface State {
   messages: Record<string, Message[]> // por conversación, se cargan al abrir el chat
   /** Salidas hechas con pescadores a bordo, por patrón (para las marcas de patrón habitual y superpatrón). */
   tripCounts: Record<string, number>
+  tripRequests: TripRequest[]
+  tripOffers: TripOffer[]
 }

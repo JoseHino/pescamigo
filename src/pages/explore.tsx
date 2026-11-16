@@ -11,6 +11,7 @@ import {
   boatRating, bookingWindow, canBook, conversationFor, fisherFeePct, fisherOutings, myActiveBooking, paysByCard, refresh, seatsLeft, upcomingOutings, useAppState, useMe,
 } from '../data/store'
 import { Guarantee } from './legal'
+import { RequestTripLink } from './requests'
 import { LIVE_MAX_AGE, startLive, stopLive, useLive } from '../lib/live'
 import { PORTS, portById } from '../data/seed'
 import { BOAT_EQUIPMENT, FISHING_TYPES, WEEKDAYS, ago, dayLabel, duration, euro, isoDate, longDate, monthLabel, shortDate } from '../lib/format'
@@ -284,7 +285,7 @@ function OutingsCalendar({ list, filtered, day, onDay }: { list: Outing[]; filte
   return (
     <div className="flex-1 overflow-y-auto p-4 lg:p-6">
       <div className="mx-auto grid max-w-5xl gap-5 lg:grid-cols-[380px_minmax(0,1fr)] lg:items-start lg:gap-6">
-        <div className="lg:col-span-2"><HowTo /></div>
+        <div className="space-y-3 lg:col-span-2"><HowTo /><RequestTripLink /></div>
         <div className="rounded-2xl border border-line bg-white p-3 sm:p-4 lg:sticky lg:top-0">
           <div className="mb-3 flex items-center justify-between gap-2">
             <button type="button" onClick={() => move(-1)} disabled={monthsAhead <= 0} aria-label="Mes anterior" className="grid h-9 w-9 place-items-center rounded-full hover:bg-foam disabled:opacity-30 disabled:hover:bg-transparent">
