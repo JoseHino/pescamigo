@@ -349,16 +349,6 @@ export function updatePrefs(prefs: User['prefs']) {
     })
 }
 
-/** Guarda los enlaces del perfil. Devuelve un mensaje de error o null. */
-export async function saveLinks(links: string[]): Promise<string | null> {
-  const me = state.me
-  if (!me) return GENERIC
-  const { error } = await supabase.from('profiles').update({ links }).eq('id', me.id)
-  if (error) return 'No se ha podido guardar el enlace. Revisa que esté bien escrito.'
-  commit({ me: { ...me, links }, users: state.users.map((u) => (u.id === me.id ? { ...u, links } : u)) })
-  return null
-}
-
 export function setNotifyEmail(on: boolean) {
   const me = state.me
   if (!me) return

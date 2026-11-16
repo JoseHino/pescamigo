@@ -5,7 +5,7 @@ import {
 } from 'lucide-react'
 import MapView from '../components/MapView'
 import {
-  Button, Chip, Empty, ErrorMsg, Header, OutingTicket, OwnerBadge, Photo, PhotoViewer, Rating, SectionTitle, SocialLinks, Stars, StatusBadge,
+  Button, Chip, Empty, ErrorMsg, Header, OutingTicket, OwnerBadge, Photo, PhotoViewer, Rating, SectionTitle, Stars, StatusBadge,
 } from '../components/ui'
 import {
   boatRating, bookingWindow, canBook, conversationFor, fisherFeePct, fisherOutings, myActiveBooking, paysByCard, refresh, seatsLeft, upcomingOutings, useAppState, useMe,
@@ -568,7 +568,6 @@ export function BoatProfile() {
                 <span className="text-[13px] text-ink-soft">{trips} {trips === 1 ? 'salida hecha' : 'salidas hechas'} con pescadores a bordo</span>
               </div>
             )}
-            {boat.links.length > 0 && <div className="mt-3"><SocialLinks links={boat.links} /></div>}
           </div>
 
           <div className="grid grid-cols-3 gap-2 text-center">

@@ -6,7 +6,7 @@ import {
 import type { BookingStatus, Outing } from '../types'
 import { boatRating, seatsLeft, useAppState } from '../data/store'
 import { portById } from '../data/seed'
-import { LEVEL_LABEL, MAX_LINKS, STATUS, dayLabel, duration, euro, linkLabel, normalizeLink, ownerLevel } from '../lib/format'
+import { LEVEL_LABEL, STATUS, dayLabel, duration, euro, ownerLevel } from '../lib/format'
 
 export const inputCls =
   'w-full min-w-0 rounded-xl border border-line bg-white px-3.5 py-3 text-[15px] text-ink placeholder:text-ink-soft/60 focus:border-sea focus:outline-none focus:ring-2 focus:ring-sea/20 disabled:bg-foam disabled:text-ink-soft'
@@ -105,82 +105,6 @@ export function OwnerBadge({ ownerId, size = 'md' }: { ownerId: string; size?: '
     >
       <Icon size={size === 'sm' ? 11 : 13} className="shrink-0" /> {LEVEL_LABEL[level]}
     </span>
-  )
-}
-
-/** Enlaces del perfil de alguien (Instagram, TikTok…) como pastillas que abren en otra pestaña. */
-export function SocialLinks({ links }: { links: string[] }) {
-  if (!links.length) return null
-  return (
-    <div className="flex min-w-0 flex-wrap gap-1.5">
-      {links.map((l) => (
-        <a
-          key={l}
-          href={l}
-          target="_blank"
-          rel="noopener noreferrer nofollow"
-          className="inline-flex min-w-0 max-w-full items-center rounded-full border border-line bg-white px-2.5 py-1 text-xs font-semibold text-sea-dark hover:bg-foam"
-        >
-          <span className="truncate">{linkLabel(l)}</span>
-        </a>
-      ))}
-    </div>
-  )
-}
-
-/** Lista de enlaces editable (redes del pescador o del barco). onChange puede devolver un mensaje de error. */
-export function LinksInput({ links, onChange, placeholder = 'instagram.com/tu_usuario' }: {
-  links: string[]
-  onChange: (next: string[]) => Promise<string | null> | string | null | void
-  placeholder?: string
-}) {
-  const [value, setValue] = useState('')
-  const [busy, setBusy] = useState(false)
-  const [err, setErr] = useState<string | null>(null)
-  const apply = async (next: string[]) => {
-    setBusy(true)
-    setErr(null)
-    const e = await onChange(next)
-    setBusy(false)
-    if (e) setErr(e)
-    return !e
-  }
-  const add = async () => {
-    if (busy) return
-    const url = normalizeLink(value)
-    if (!url) return setErr('Ese enlace no parece válido. Cópialo del perfil, por ejemplo instagram.com/tu_usuario.')
-    if (links.includes(url)) return setErr('Ese enlace ya está.')
-    if (await apply([...links, url])) setValue('')
-  }
-  return (
-    <div className="space-y-2">
-      {links.length > 0 && (
-        <ul className="space-y-2">
-          {links.map((l) => (
-            <li key={l} className="flex items-center gap-2 rounded-xl border border-line bg-white px-3 py-2">
-              <a href={l} target="_blank" rel="noopener noreferrer nofollow" className="flex min-w-0 flex-1 items-center text-sm font-semibold text-sea-dark">
-                <span className="truncate">{linkLabel(l)}</span>
-              </a>
-              <button type="button" disabled={busy} onClick={() => apply(links.filter((x) => x !== l))} aria-label={`Quitar ${linkLabel(l)}`}
-                className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-ink-soft hover:bg-foam disabled:opacity-50">
-                <X size={16} />
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
-      {links.length < MAX_LINKS ? (
-        <div className="flex gap-2">
-          <input className={`${inputCls} py-2.5 text-sm`} type="text" inputMode="url" autoCapitalize="none" autoCorrect="off" spellCheck={false}
-            value={value} onChange={(e) => setValue(e.target.value)} placeholder={placeholder} aria-label="Enlace a una red social o web"
-            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); void add() } }} />
-          <Button type="button" variant="outline" disabled={busy || !value.trim()} onClick={() => void add()} className="shrink-0">Añadir</Button>
-        </div>
-      ) : (
-        <p className="text-xs text-ink-soft">Has llegado al máximo de {MAX_LINKS} enlaces.</p>
-      )}
-      <ErrorMsg>{err}</ErrorMsg>
-    </div>
   )
 }
 

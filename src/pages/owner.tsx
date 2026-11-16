@@ -5,7 +5,7 @@ import {
   Settings2, Wallet, X,
 } from 'lucide-react'
 import {
-  Button, Chip, Empty, ErrorMsg, Field, Header, LinksInput, Notice, OutingTicket, Photo, SectionTitle, StatusBadge, inputCls,
+  Button, Chip, Empty, ErrorMsg, Field, Header, Notice, OutingTicket, Photo, SectionTitle, StatusBadge, inputCls,
 } from '../components/ui'
 import { NotFound } from './explore'
 import {
@@ -979,11 +979,6 @@ export function BoatEdit() {
               {BOAT_EQUIPMENT.map((t) => <Chip key={t} active={f.equipment.includes(t)} onClick={() => toggleEquipment(t)}>{t}</Chip>)}
             </div>
             <p className="mt-1.5 text-xs text-ink-soft">Marca lo que hay en el barco para que el pescador sepa qué llevar.</p>
-          </div>
-          <div>
-            <p className="mb-1.5 text-[13px] font-semibold">Redes del barco</p>
-            <LinksInput links={f.links} onChange={(next) => setF((x) => ({ ...x, links: next }))} placeholder="instagram.com/tu_barco" />
-            <p className="mt-1.5 text-xs text-ink-soft">Instagram, TikTok, YouTube o tu web. Se verán en la ficha del barco.</p>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <Field label="Se puede reservar desde">

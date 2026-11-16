@@ -207,7 +207,7 @@ export function Profile() {
           <section className="space-y-3 rounded-2xl border border-line bg-white p-4">
             <div>
               <h2 className="text-sm font-bold">{boats.length > 1 ? 'Las fichas de tus barcos' : 'La ficha de tu barco'}</h2>
-              <p className="text-xs text-ink-soft">Es lo que ven los pescadores: fotos, redes, lo que hay a bordo, valoraciones y tus próximas salidas.</p>
+              <p className="text-xs text-ink-soft">Es lo que ven los pescadores: fotos, lo que hay a bordo, valoraciones y tus próximas salidas.</p>
             </div>
             {boats.length > 0 ? (
               <ul className="space-y-2">
