@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { Camera, CheckCircle2, MessageCircle, Minus, Plus, Send, Star, Ticket } from 'lucide-react'
-import { Button, Empty, ErrorMsg, Field, Header, OutingTicket, SectionTitle, StatusBadge, inputCls } from '../components/ui'
+import { Button, Empty, ErrorMsg, Field, FitPhoto, Header, OutingTicket, SectionTitle, StatusBadge, inputCls } from '../components/ui'
 import { NotFound } from './explore'
 import {
   addReview, bookingWindow, cancelBooking, conversationFor, isPast, myActiveBooking, requestBooking, seatsLeft, useAppState, useMe,
@@ -304,7 +304,7 @@ export function ReviewForm() {
           <p className="mb-2 text-[13px] font-semibold">Foto de la salida (opcional)</p>
           {photo ? (
             <div className="relative">
-              <img src={photo} alt="Foto elegida" className="h-44 w-full rounded-2xl object-cover" />
+              <FitPhoto src={photo} alt="Foto elegida" eager className="h-52 w-full rounded-2xl" />
               <button type="button" onClick={() => setPhoto(null)} className="absolute right-2 top-2 rounded-full bg-white px-3 py-1 text-xs font-semibold shadow">Quitar</button>
             </div>
           ) : (

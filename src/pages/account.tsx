@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Anchor, Bell, ChevronRight, Fish, LayoutDashboard, LogOut, Pencil, Plus, Smartphone } from 'lucide-react'
-import { Button, Chip, Empty, ErrorMsg, Header, LinksInput, OwnerBadge } from '../components/ui'
+import { Button, Chip, Empty, ErrorMsg, FitPhoto, Header, LinksInput, OwnerBadge } from '../components/ui'
 import { markNoticesRead, myBoats, saveLinks, setNotifyEmail, signOut, updatePrefs, useAppState, useMe } from '../data/store'
 import { PORTS, portById } from '../data/seed'
 import { FISHING_TYPES, HABITUAL_MIN, SUPER_MIN, ago } from '../lib/format'
@@ -181,7 +181,7 @@ export function Profile() {
                 {boats.map((b) => (
                   <li key={b.id} className="flex items-center gap-3 rounded-xl border border-line p-2.5">
                     <Link to={`/barco/${b.id}`} className="flex min-w-0 flex-1 items-center gap-3">
-                      <img src={b.photos[0]} alt="" className="h-12 w-12 shrink-0 rounded-lg bg-sea-50 object-cover" />
+                      <FitPhoto src={b.photos[0]} className="h-12 w-12 shrink-0 rounded-lg" />
                       <span className="min-w-0">
                         <span className="block truncate text-sm font-bold">{b.name}</span>
                         <span className="block truncate text-xs text-ink-soft">{b.photos.length} {b.photos.length === 1 ? 'foto' : 'fotos'} · {portById(b.portId).name}</span>

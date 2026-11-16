@@ -5,7 +5,7 @@ import {
   Settings2, Wallet, X,
 } from 'lucide-react'
 import {
-  Button, Chip, Empty, ErrorMsg, Field, Header, LinksInput, Notice, OutingTicket, SectionTitle, SocialLinks, StatusBadge, inputCls,
+  Button, Chip, Empty, ErrorMsg, Field, FitPhoto, Header, LinksInput, Notice, OutingTicket, SectionTitle, SocialLinks, StatusBadge, inputCls,
 } from '../components/ui'
 import { NotFound } from './explore'
 import {
@@ -242,7 +242,7 @@ export function Panel() {
             {boats.map((b) => (
               <li key={b.id}>
                 <Link to={`/barco-editar/${b.id}`} className="flex items-center gap-3 rounded-2xl border border-line bg-white p-3">
-                  <img src={b.photos[0]} alt="" className="h-12 w-12 shrink-0 rounded-xl bg-sea-50 object-cover" />
+                  <FitPhoto src={b.photos[0]} className="h-12 w-12 shrink-0 rounded-xl" />
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-sm font-bold">{b.name}</span>
                     <span className="block truncate text-xs text-ink-soft">{portById(b.portId).name} · {b.capacity} plazas</span>
@@ -918,7 +918,7 @@ export function BoatEdit() {
             <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
               {f.photos.map((src, i) => (
                 <div key={i} className="relative aspect-[4/3] overflow-hidden rounded-xl bg-sea-50">
-                  <img src={src} alt={`Foto ${i + 1}`} className="h-full w-full object-cover" />
+                  <FitPhoto src={src} alt={`Foto ${i + 1}`} eager className="h-full w-full" />
                   {i === 0 ? (
                     <span className="absolute bottom-1.5 left-1.5 rounded-full bg-ink/85 px-2 py-0.5 text-[10px] font-semibold text-white">Portada</span>
                   ) : (

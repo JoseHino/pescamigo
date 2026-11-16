@@ -77,6 +77,16 @@ export function bookingWindow(boat: Boat, o: Outing): { open: boolean; reason?: 
   }
   return { open: true }
 }
+/** Se puede pedir plaza ahora mismo: quedan plazas y las reservas están abiertas. */
+export function canBook(s: State, o: Outing) {
+  const boat = s.boats.find((b) => b.id === o.boatId)
+  return !!boat && o.seats - o.seatsTaken > 0 && bookingWindow(boat, o).open
+}
+/** Lo que ve el pescador: solo salidas en las que puede pedir plaza, más las que ya ha solicitado.
+ *  Nunca una salida sin opción de reservar (cerrada por horario o completa). */
+export function fisherOutings(s: State, meId: string) {
+  return upcomingOutings(s).filter((o) => canBook(s, o) || !!myActiveBooking(s, o.id, meId))
+}
 export function conversationFor(s: State, bookingId: string) {
   return s.conversations.find((c) => c.bookingId === bookingId) ?? null
 }

@@ -5,9 +5,11 @@ import {
 } from 'lucide-react'
 import MapView from '../components/MapView'
 import {
-  Button, Chip, Empty, Header, OutingTicket, OwnerBadge, PhotoViewer, Rating, SectionTitle, SocialLinks, Stars, StatusBadge,
+  Button, Chip, Empty, FitPhoto, Header, OutingTicket, OwnerBadge, PhotoViewer, Rating, SectionTitle, SocialLinks, Stars, StatusBadge,
 } from '../components/ui'
-import { boatRating, bookingWindow, conversationFor, myActiveBooking, seatsLeft, upcomingOutings, useAppState, useMe } from '../data/store'
+import {
+  boatRating, bookingWindow, canBook, conversationFor, fisherOutings, myActiveBooking, seatsLeft, upcomingOutings, useAppState, useMe,
+} from '../data/store'
 import { PORTS, portById } from '../data/seed'
 import { BOAT_EQUIPMENT, FISHING_TYPES, WEEKDAYS, dayLabel, duration, euro, isoDate, longDate, monthLabel, shortDate } from '../lib/format'
 import type { Outing } from '../types'
@@ -16,11 +18,12 @@ export function MapPage() {
   const s = useAppState()
   const me = useMe()
   const [sel, setSel] = useState<string | null>(null)
-  const upcoming = upcomingOutings(s)
+  // Al pescador solo le cuentan las salidas en las que puede pedir plaza.
+  const upcoming = me?.role === 'fisher' ? fisherOutings(s, me.id) : upcomingOutings(s)
   const items = useMemo(
     () => s.boats.map((boat) => ({ boat, hasOuting: upcoming.some((o) => o.boatId === boat.id) })),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [s.boats, s.outings],
+    [s.boats, s.outings, s.bookings],
   )
   const boat = s.boats.find((b) => b.id === sel)
   const next = boat ? upcoming.find((o) => o.boatId === boat.id) : null
@@ -47,7 +50,7 @@ export function MapPage() {
             <X size={16} />
           </button>
           <Link to={`/barco/${boat.id}`} className="flex gap-3">
-            <img src={boat.photos[0]} alt="" className="h-20 w-24 shrink-0 rounded-xl object-cover" />
+            <FitPhoto src={boat.photos[0]} className="h-20 w-24 shrink-0 rounded-xl" />
             <div className="min-w-0 flex-1 pr-7">
               <p className="flex min-w-0 items-center gap-1.5">
                 <span className="truncate text-base font-bold">{boat.name}</span>
@@ -83,6 +86,7 @@ export function MapPage() {
 
 export function OutingsPage() {
   const s = useAppState()
+  const me = useMe()
   // Filtros y día elegido van en la dirección: al volver de una salida se recupera lo que se estaba mirando.
   const [q, setQ] = useSearchParams()
   const port = q.get('puerto')
@@ -98,7 +102,8 @@ export function OutingsPage() {
   // Al cambiar un filtro se salta al primer día que tenga salidas de ese filtro.
   const setPort = (v: string | null) => set({ puerto: v, dia: null })
   const setType = (v: string | null) => set({ tipo: v, dia: null })
-  const list = upcomingOutings(s).filter((o) => {
+  // Solo salidas en las que se puede pedir plaza (y las que el pescador ya ha pedido): nunca una sin opción de reservar.
+  const list = (me ? fisherOutings(s, me.id) : []).filter((o) => {
     return (!port || o.portId === port) && (!type || o.type === type)
   })
   return (
@@ -153,11 +158,10 @@ function OutingsCalendar({ list, filtered, day, onDay }: { list: Outing[]; filte
   const todayIso = isoDate(now)
   const byDay = new Map<string, Outing[]>()
   for (const o of list) byDay.set(o.date, [...(byDay.get(o.date) ?? []), o])
-  // Se puede pedir plaza: quedan plazas y las reservas están abiertas (no demasiado pronto ni demasiado tarde).
-  const bookable = (o: Outing) => {
-    const b = s.boats.find((x) => x.id === o.boatId)
-    return !!b && seatsLeft(s, o) > 0 && bookingWindow(b, o).open
-  }
+  // En la lista solo hay salidas reservables o ya solicitadas por el pescador.
+  const me = useMe()
+  const bookable = (o: Outing) => canBook(s, o)
+  const requested = (o: Outing) => !!me && !!myActiveBooking(s, o.id, me.id)
 
   // Día elegido: el de la dirección o, si no hay, el primero en el que se puede pedir plaza.
   const firstDay = (list.find(bookable) ?? list[0])?.date ?? todayIso
@@ -214,7 +218,7 @@ function OutingsCalendar({ list, filtered, day, onDay }: { list: Outing[]; filte
             {cells.map((d, i) => {
               if (!d) return <span key={`x${i}`} />
               const os = byDay.get(d) ?? []
-              const free = os.some(bookable)
+              const free = os.some((o) => bookable(o) && !requested(o))
               const past = d < todayIso
               const isSel = d === sel
               return (
@@ -224,18 +228,18 @@ function OutingsCalendar({ list, filtered, day, onDay }: { list: Outing[]; filte
                   disabled={past}
                   onClick={() => pick(d, os.length > 0)}
                   aria-pressed={isSel}
-                  aria-label={`${longDate(d)}, ${os.length ? `${os.length} ${os.length === 1 ? 'salida' : 'salidas'}${free ? '' : ', sin plazas que pedir'}` : 'sin salidas'}`}
+                  aria-label={`${longDate(d)}, ${os.length ? `${os.length} ${os.length === 1 ? 'salida' : 'salidas'}${free ? '' : ', ya solicitada'}` : 'sin salidas'}`}
                   className={`flex aspect-square min-w-0 flex-col items-center justify-center rounded-lg text-[13px] font-semibold transition ${
                     isSel ? 'bg-ink text-white'
                       : past ? 'text-ink-soft/40'
-                      : os.length ? (free ? 'bg-sea-50 text-sea-dark hover:brightness-95' : 'bg-foam text-ink hover:brightness-95')
+                      : os.length ? (free ? 'bg-sea-50 text-sea-dark hover:brightness-95' : 'bg-buoy-50 text-buoy-dark hover:brightness-95')
                       : 'text-ink-soft hover:bg-foam'
                   } ${d === todayIso && !isSel ? 'ring-1 ring-sea' : ''}`}
                 >
                   <span className="tnum">{Number(d.slice(8))}</span>
                   <span className="mt-0.5 flex h-1.5 gap-0.5">
                     {os.slice(0, 3).map((o) => (
-                      <span key={o.id} className={`h-1.5 w-1.5 rounded-full ${isSel ? 'bg-white' : bookable(o) ? 'bg-sea' : 'bg-ink-soft/40'}`} />
+                      <span key={o.id} className={`h-1.5 w-1.5 rounded-full ${isSel ? 'bg-white' : requested(o) ? 'bg-buoy' : 'bg-sea'}`} />
                     ))}
                   </span>
                 </button>
@@ -244,7 +248,7 @@ function OutingsCalendar({ list, filtered, day, onDay }: { list: Outing[]; filte
           </div>
           <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-ink-soft">
             <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-sea" /> Puedes pedir plaza</span>
-            <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-ink-soft/40" /> Completa o reservas cerradas</span>
+            <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-buoy" /> Ya la has pedido</span>
           </div>
         </div>
 
@@ -307,7 +311,7 @@ export function OutingDetail() {
     <div className="flex h-full flex-col">
       <Header title={longDate(o.date)} back />
       <div className="flex-1 overflow-y-auto">
-        <img src={boat.photos[0]} alt="" className="h-44 w-full bg-sea-50 object-cover lg:mx-auto lg:mt-6 lg:h-80 lg:max-w-[42rem] lg:rounded-2xl" />
+        <FitPhoto src={boat.photos[0]} eager className="h-56 w-full lg:mx-auto lg:mt-6 lg:h-80 lg:max-w-[42rem] lg:rounded-2xl" />
         <div className="col space-y-4 p-4">
           <div>
             <div className="flex flex-wrap items-center gap-2">
@@ -343,7 +347,7 @@ export function OutingDetail() {
           )}
 
           <Link to={`/barco/${boat.id}`} className="flex items-center gap-3 rounded-2xl border border-line bg-white p-3">
-            <img src={boat.photos[boat.photos.length > 1 ? 1 : 0]} alt="" className="h-14 w-14 shrink-0 rounded-xl bg-sea-50 object-cover" />
+            <FitPhoto src={boat.photos[boat.photos.length > 1 ? 1 : 0]} className="h-14 w-14 shrink-0 rounded-xl" />
             <div className="min-w-0 flex-1">
               <p className="flex min-w-0 items-center gap-1.5">
                 <span className="truncate text-[15px] font-bold">{boat.name}</span>
@@ -421,7 +425,8 @@ export function BoatProfile() {
   const reviews = s.reviews.filter((r) => r.boatId === boat.id).sort((a, b) => b.date.localeCompare(a.date))
   const r = boatRating(s, boat.id)
   const trips = s.tripCounts[boat.ownerId] ?? 0
-  const outings = upcomingOutings(s).filter((o) => o.boatId === boat.id)
+  // El pescador solo ve las salidas en las que puede pedir plaza (o que ya ha pedido); el patrón, todas.
+  const outings = (isFisher && s.me ? fisherOutings(s, s.me.id) : upcomingOutings(s)).filter((o) => o.boatId === boat.id)
   const gallery = [...boat.photos, ...reviews.flatMap((x) => (x.photo ? [x.photo] : []))]
   const since = boat.createdAt ? new Date(boat.createdAt).toLocaleDateString('es-ES', { month: 'long', year: 'numeric' }) : ''
   const equipment = BOAT_EQUIPMENT.filter((t) => boat.equipment.includes(t))
@@ -437,9 +442,9 @@ export function BoatProfile() {
               type="button"
               onClick={() => setViewer(i)}
               aria-label={`Ver la foto ${i + 1} de ${gallery.length} a pantalla completa`}
-              className={`shrink-0 snap-center overflow-hidden rounded-2xl bg-sea-50 ${gallery.length === 1 ? 'w-full' : 'w-[82%] lg:w-[70%]'}`}
+              className={`shrink-0 snap-center overflow-hidden rounded-2xl ${gallery.length === 1 ? 'w-full' : 'w-[82%] lg:w-[70%]'}`}
             >
-              <img src={src} alt={`Foto ${i + 1} de ${boat.name}`} className="h-48 w-full object-cover lg:h-72" />
+              <FitPhoto src={src} alt={`Foto ${i + 1} de ${boat.name}`} eager={i === 0} className="h-56 w-full lg:h-80" />
             </button>
           ))}
         </div>
@@ -542,7 +547,7 @@ export function BoatProfile() {
                       {x.outingDay ? `Salida verificada · ${shortDate(x.outingDay)}` : 'Salida verificada'}
                     </p>
                     <p className="wrap-anywhere mt-2 text-sm leading-relaxed">{x.comment}</p>
-                    {x.photo && <img src={x.photo} alt="Foto de la salida" className="mt-3 h-36 w-full rounded-xl object-cover" />}
+                    {x.photo && <FitPhoto src={x.photo} alt="Foto de la salida" className="mt-3 h-48 w-full rounded-xl" />}
                   </li>
                 ))}
               </ul>

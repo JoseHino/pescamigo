@@ -1,7 +1,7 @@
-import { StrictMode, type ReactNode } from 'react'
+import { StrictMode, useEffect, useState, type ReactNode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { HashRouter, NavLink, Navigate, Outlet, Route, Routes } from 'react-router-dom'
-import { CalendarDays, LayoutDashboard, Map as MapIcon, MessageCircle, Ticket, User as UserIcon, CalendarRange } from 'lucide-react'
+import { CalendarDays, LayoutDashboard, Map as MapIcon, MessageCircle, RefreshCw, Ticket, User as UserIcon, CalendarRange } from 'lucide-react'
 import './index.css'
 import { isPast, isUnread, useAppState, useMe } from './data/store'
 import { Auth, RoleSetup, Welcome } from './pages/auth'
@@ -13,7 +13,50 @@ import { Alerts, Profile } from './pages/account'
 import type { Role } from './types'
 
 function Frame({ children }: { children: ReactNode }) {
-  return <div className="relative mx-auto h-full max-w-[440px] overflow-hidden bg-foam shadow-2xl lg:max-w-none lg:shadow-none">{children}</div>
+  return (
+    <div className="relative mx-auto h-full max-w-[440px] overflow-hidden bg-foam shadow-2xl lg:max-w-none lg:shadow-none">
+      {children}
+      <UpdateBanner />
+    </div>
+  )
+}
+
+/** Avisa cuando se ha publicado una versión nueva: la app abierta o instalada seguiría con la antigua hasta cerrarla del todo.
+ *  Compara el archivo de la app que está cargado con el que sirve ahora la web (al volver a la app, al enfocarla y cada 5 min). */
+function UpdateBanner() {
+  const [ready, setReady] = useState(false)
+  useEffect(() => {
+    const current = document.querySelector<HTMLScriptElement>('script[type="module"][src*="assets/index-"]')?.src.split('/').pop()
+    if (!current) return // en desarrollo no hay archivo con versión
+    const check = async () => {
+      if (document.visibilityState !== 'visible') return
+      try {
+        const html = await (await fetch(`./index.html?v=${Date.now()}`, { cache: 'no-store' })).text()
+        const latest = html.match(/assets\/(index-[\w-]+\.js)/)?.[1]
+        if (latest && latest !== current) setReady(true)
+      } catch {
+        // sin conexión: se vuelve a mirar más tarde
+      }
+    }
+    const timer = window.setInterval(check, 5 * 60 * 1000)
+    document.addEventListener('visibilitychange', check)
+    window.addEventListener('focus', check)
+    return () => {
+      window.clearInterval(timer)
+      document.removeEventListener('visibilitychange', check)
+      window.removeEventListener('focus', check)
+    }
+  }, [])
+  if (!ready) return null
+  return (
+    <div role="status" className="fixed inset-x-3 top-3 z-[1500] mx-auto flex max-w-md items-center gap-3 rounded-2xl bg-ink px-4 py-3 text-white shadow-xl">
+      <RefreshCw size={18} className="shrink-0" />
+      <p className="min-w-0 flex-1 text-[13px] font-semibold">Hay una versión nueva de Pescamigo</p>
+      <button type="button" onClick={() => window.location.reload()} className="shrink-0 rounded-lg bg-white px-3 py-1.5 text-[13px] font-bold text-ink hover:bg-sea-50">
+        Actualizar
+      </button>
+    </div>
+  )
 }
 
 /** Solo para quien no ha iniciado sesión. */
