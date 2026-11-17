@@ -22,15 +22,13 @@ export function Welcome() {
   return (
     <div className="flex h-full flex-col bg-ink text-white lg:flex-row">
       <div className="relative flex flex-1 flex-col justify-end overflow-hidden px-6 pb-8 lg:px-16 lg:pb-20">
-        <svg className="absolute inset-x-0 bottom-0 w-full text-white/[0.06]" viewBox="0 0 440 300" fill="currentColor" aria-hidden="true">
-          <path d="M0 120q55-30 110 0t110 0 110 0 110 0v180H0z" />
-          <path d="M0 180q55-30 110 0t110 0 110 0 110 0v120H0z" />
-          <path d="M0 240q55-30 110 0t110 0 110 0 110 0v60H0z" />
-        </svg>
+        {/* Foto de portada (barco saliendo a pescar) con degradado para que el texto se lea */}
+        <img src="./bienvenida.jpg" alt="" aria-hidden="true" className="absolute inset-0 h-full w-full object-cover" />
+        <div className="absolute inset-0 bg-gradient-to-b from-ink/30 via-ink/10 to-ink/90" aria-hidden="true" />
         <img
           src="./logo-512.png"
           alt="Pescamigo"
-          className="absolute inset-x-0 top-[7%] mx-auto w-[46%] max-w-[210px] lg:inset-x-auto lg:right-16 lg:top-16 lg:mx-0 lg:w-[260px] lg:max-w-none"
+          className="absolute inset-x-0 top-[6%] mx-auto w-[34%] max-w-[150px] rounded-[22%] shadow-2xl lg:inset-x-auto lg:right-12 lg:top-12 lg:mx-0 lg:w-[140px] lg:max-w-none"
         />
         <div className="relative lg:max-w-xl">
           <h1 className="text-[34px] font-extrabold leading-[1.08] tracking-tight lg:text-[52px]">
