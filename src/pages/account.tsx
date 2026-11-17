@@ -6,7 +6,7 @@ import { fileToDataUrl } from '../lib/image'
 import { deleteAccount, markNoticesRead, myBoats, payoutAccount, setAvatar, setNotifyEmail, signOut, updatePrefs, useAppState, useMe } from '../data/store'
 import { PORTS, portById } from '../data/seed'
 import { FISHING_TYPES, HABITUAL_MIN, SUPER_MIN, ago } from '../lib/format'
-import { disablePush, enablePush, pushState, type PushState } from '../lib/push'
+import { NATIVE_APP, disablePush, enablePush, pushState, type PushState } from '../lib/push'
 
 export function Alerts() {
   const s = useAppState()
@@ -82,6 +82,7 @@ function DevicePush() {
           <p className="text-xs text-ink-soft">
             {st === 'on' ? 'Recibes notificaciones aunque tengas la app cerrada.'
               : st === 'denied' ? 'Bloqueadas en el navegador. Actívalas en los ajustes del sitio pescamigo.es.'
+              : st === 'unsupported' && NATIVE_APP ? 'Muy pronto en esta app. Mientras tanto te avisamos por correo.'
               : st === 'unsupported' ? 'Este navegador no las admite. En iPhone, añade Pescamigo a la pantalla de inicio y ábrelo desde ahí.'
               : 'Notificaciones aunque tengas la app cerrada.'}
           </p>

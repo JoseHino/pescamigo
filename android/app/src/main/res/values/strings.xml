@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Pescamigo</string>
+    <string name="title_activity_main">Pescamigo</string>
+    <string name="package_name">es.pescamigo.app</string>
+    <string name="custom_url_scheme">es.pescamigo.app</string>
+</resources>

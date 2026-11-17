@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import { HashRouter, NavLink, Navigate, Outlet, Route, Routes } from 'react-router-dom'
 import { CalendarDays, LayoutDashboard, Map as MapIcon, MessageCircle, RefreshCw, Ticket, User as UserIcon, CalendarRange } from 'lucide-react'
 import './index.css'
+import { Capacitor } from '@capacitor/core'
 import { isPast, isUnread, useAppState, useMe } from './data/store'
 import { Auth, RoleSetup, Welcome } from './pages/auth'
 import { BoatProfile, MapPage, OutingDetail, OutingsPage } from './pages/explore'
@@ -164,6 +165,9 @@ for (const ev of ['gesturestart', 'gesturechange', 'gestureend']) {
   document.addEventListener(ev, (e) => { if (!inMap(e.target)) e.preventDefault() }, { passive: false })
 }
 document.addEventListener('touchmove', (e) => { if (e.touches.length > 1 && !inMap(e.target)) e.preventDefault() }, { passive: false })
+
+// En la app de App Store / Google Play el contenido llega hasta arriba: se deja sitio a la barra de estado.
+if (Capacitor.isNativePlatform()) document.documentElement.classList.add('native')
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

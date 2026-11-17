@@ -1,3 +1,4 @@
+import { Capacitor } from '@capacitor/core'
 import { supabase } from './supabase'
 
 // Clave pública de las notificaciones push (la privada solo la tiene el servidor).
@@ -5,7 +6,11 @@ const VAPID_PUBLIC = 'BH6fdGzL1Od9lrqcFvCtvl_CB1pUFhWm5tma8qB_EouC6AU-370_PSQNzC
 
 export type PushState = 'unsupported' | 'denied' | 'on' | 'off'
 
+/** En la app nativa el aviso al móvil irá por Firebase/Apple (pendiente): de momento, avisos por correo. */
+export const NATIVE_APP = Capacitor.isNativePlatform()
+
 export function pushSupported() {
+  if (NATIVE_APP) return false
   return 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window
 }
 

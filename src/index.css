@@ -19,6 +19,9 @@
 }
 
 html, body, #root { height: 100%; }
+/* App nativa: hueco para la barra de estado (hora, batería) */
+html.native body { background: #fff; }
+html.native #root { padding-top: max(env(safe-area-inset-top), var(--safe-area-inset-top, 0px)); }
 /* Que se comporte como una app: sin zoom con los dedos ni doble toque, sin "rebote" de la página
    y sin que el texto cambie de tamaño al girar el móvil. El mapa (Leaflet) gestiona su propio zoom. */
 html, body {
