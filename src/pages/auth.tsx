@@ -25,11 +25,6 @@ export function Welcome() {
         {/* Foto de portada (barco saliendo a pescar) con degradado para que el texto se lea */}
         <img src="./bienvenida.jpg" alt="" aria-hidden="true" className="absolute inset-0 h-full w-full object-cover" />
         <div className="absolute inset-0 bg-gradient-to-b from-ink/30 via-ink/10 to-ink/90" aria-hidden="true" />
-        <img
-          src="./logo-512.png"
-          alt="Pescamigo"
-          className="absolute inset-x-0 top-[6%] mx-auto w-[34%] max-w-[150px] rounded-[22%] shadow-2xl lg:inset-x-auto lg:right-12 lg:top-12 lg:mx-0 lg:w-[140px] lg:max-w-none"
-        />
         <div className="relative lg:max-w-xl">
           <h1 className="text-[34px] font-extrabold leading-[1.08] tracking-tight lg:text-[52px]">
             Hay un barco que sale a pescar <span className="text-buoy">y le sobra sitio.</span>
