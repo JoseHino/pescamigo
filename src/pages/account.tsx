@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { Anchor, Bell, Camera, ChevronRight, CreditCard, FileText, Fish, LayoutDashboard, LogOut, Pencil, Plus, Smartphone } from 'lucide-react'
+import { Anchor, Bell, Camera, ChevronRight, CreditCard, FileText, Fish, LayoutDashboard, LogOut, Pencil, Plus, Smartphone, Trash2 } from 'lucide-react'
 import { Avatar, Button, Chip, Empty, ErrorMsg, Header, OwnerBadge, Photo } from '../components/ui'
 import { fileToDataUrl } from '../lib/image'
-import { markNoticesRead, myBoats, payoutAccount, setAvatar, setNotifyEmail, signOut, updatePrefs, useAppState, useMe } from '../data/store'
+import { deleteAccount, markNoticesRead, myBoats, payoutAccount, setAvatar, setNotifyEmail, signOut, updatePrefs, useAppState, useMe } from '../data/store'
 import { PORTS, portById } from '../data/seed'
 import { FISHING_TYPES, HABITUAL_MIN, SUPER_MIN, ago } from '../lib/format'
 import { disablePush, enablePush, pushState, type PushState } from '../lib/push'
@@ -336,7 +336,40 @@ export function Profile() {
         </Link>
 
         <Button variant="outline" full onClick={async () => { await signOut(); nav('/') }}><LogOut size={16} /> Cerrar sesión</Button>
+        <DeleteAccount />
       </div>
+    </div>
+  )
+}
+
+/** Borrar la cuenta (lo exigen App Store y Google Play). Pide confirmación en dos pasos. */
+function DeleteAccount() {
+  const nav = useNavigate()
+  const [open, setOpen] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState<string | null>(null)
+  // Al abrir, el aviso se coloca a la vista (si no, queda tapado por la barra de abajo)
+  useEffect(() => { if (open) document.getElementById('borrar-cuenta')?.scrollIntoView({ block: 'center', behavior: 'smooth' }) }, [open])
+  if (!open) {
+    return (
+      <button type="button" onClick={() => setOpen(true)} className="flex w-full items-center justify-center gap-2 py-3 text-sm font-semibold text-ink-soft">
+        <Trash2 size={16} /> Borrar mi cuenta
+      </button>
+    )
+  }
+  return (
+    <div id="borrar-cuenta" className="space-y-3 rounded-2xl border border-red-200 bg-red-50 p-4">
+      <p className="text-[15px] font-bold text-red-700">¿Borrar tu cuenta para siempre?</p>
+      <p className="text-sm leading-relaxed text-ink">
+        Se borrarán tu perfil, tus fotos, tus barcos, tus salidas, tus reservas y tus mensajes. Las salidas y reservas que tengas pendientes se cancelarán y avisaremos a los demás. No se puede deshacer.
+      </p>
+      <ErrorMsg>{err}</ErrorMsg>
+      <button type="button" disabled={busy}
+        onClick={async () => { setBusy(true); setErr(null); const e = await deleteAccount(); setBusy(false); if (e) setErr(e); else nav('/') }}
+        className="w-full rounded-xl bg-red-600 px-4 py-3 text-[15px] font-semibold text-white disabled:opacity-60">
+        {busy ? 'Borrando…' : 'Sí, borrar mi cuenta'}
+      </button>
+      <Button variant="outline" full onClick={() => { setOpen(false); setErr(null) }}>No, volver</Button>
     </div>
   )
 }

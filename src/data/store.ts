@@ -334,6 +334,21 @@ export async function signOut() {
   commit({ ready: true, me: null, ...EMPTY })
 }
 
+/** Borra la cuenta para siempre: fotos, perfil, barcos, salidas, reservas y chats. Devuelve el error o null. */
+export async function deleteAccount(): Promise<string | null> {
+  const me = state.me
+  if (!me) return GENERIC
+  // Primero las fotos de su carpeta (la base de datos no puede borrarlas)
+  const { data: files } = await supabase.storage.from('photos').list(me.id, { limit: 1000 })
+  if (files?.length) await supabase.storage.from('photos').remove(files.map((f) => `${me.id}/${f.name}`))
+  const { error } = await supabase.rpc('delete_my_account')
+  if (error) return error.message.startsWith('Tienes') ? error.message : GENERIC
+  await disablePush().catch(() => undefined)
+  await supabase.auth.signOut({ scope: 'local' }).catch(() => undefined)
+  commit({ ready: true, me: null, ...EMPTY })
+  return null
+}
+
 export async function setRole(role: Role): Promise<string | null> {
   const me = state.me
   if (!me) return GENERIC
