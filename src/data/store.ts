@@ -616,11 +616,11 @@ export async function payBooking(bookingId: string): Promise<string | null> {
   return null
 }
 
-/** Cuenta de cobro del patrón: 'onboard' abre el alta en Stripe; 'status' comprueba si ya puede cobrar. */
-export async function payoutAccount(action: 'onboard' | 'status'): Promise<{ error?: string; ready?: boolean; connected?: boolean }> {
+/** Cuenta de cobro del patrón: 'onboard' abre el alta en Stripe; 'dashboard' abre su panel de Stripe (cobros y cuenta bancaria); 'status' comprueba si ya puede cobrar. */
+export async function payoutAccount(action: 'onboard' | 'dashboard' | 'status'): Promise<{ error?: string; ready?: boolean; connected?: boolean }> {
   const { ok, data } = await callPagos({ action })
   if (!ok) return { error: typeof data.error === 'string' ? data.error : GENERIC }
-  if (action === 'onboard' && data.url) {
+  if ((action === 'onboard' || action === 'dashboard') && data.url) {
     window.location.href = data.url
     return {}
   }

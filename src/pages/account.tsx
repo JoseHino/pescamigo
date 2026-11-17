@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { Anchor, Bell, Camera, ChevronRight, CreditCard, FileText, Fish, LayoutDashboard, LogOut, Pencil, Plus, Smartphone, Trash2 } from 'lucide-react'
+import { Anchor, Bell, Camera, CheckCircle2, ChevronRight, CreditCard, ExternalLink, FileText, Fish, LayoutDashboard, Landmark, LogOut, Pencil, Plus, ShieldCheck, Smartphone, Trash2, UserCheck, Wallet } from 'lucide-react'
 import { Avatar, Button, Chip, Empty, ErrorMsg, Header, OwnerBadge, Photo } from '../components/ui'
 import { fileToDataUrl } from '../lib/image'
 import { deleteAccount, markNoticesRead, myBoats, payoutAccount, setAvatar, setNotifyEmail, signOut, updatePrefs, useAppState, useMe } from '../data/store'
@@ -96,46 +96,99 @@ function DevicePush() {
   )
 }
 
-/** Cuenta de cobro del patrón (Stripe): para cobrar con tarjeta hay que darla de alta una vez. Solo se ve con los pagos activos. */
+/** Cuenta de cobro del patrón (Stripe). Se ve siempre; mientras los pagos no estén activos sale como «Próximamente». */
 function PayoutCard() {
   const me = useMe()
+  const s = useAppState()
   const [q, setQ] = useSearchParams()
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState<string | null>(null)
   const back = q.get('cobros')
+  const on = s.settings.paymentsEnabled
   useEffect(() => {
     // vuelta del alta en Stripe: se comprueba el estado de la cuenta
-    if (!back) return
+    if (!back || !on) return
     void payoutAccount('status').then((r) => {
       if (r.error) setErr(r.error)
       setQ({}, { replace: true })
     })
-  }, [back, setQ])
+  }, [back, on, setQ])
   if (!me) return null
-  const ready = me.cardReady
-  const go = async () => {
+  const ready = on && me.cardReady
+  const started = me.stripeConnected
+  const run = async (action: 'onboard' | 'dashboard') => {
     setBusy(true)
     setErr(null)
-    const r = await payoutAccount('onboard')
+    const r = await payoutAccount(action)
     setBusy(false)
     if (r.error) setErr(r.error)
   }
+  const badge = !on
+    ? { t: 'Próximamente', c: 'bg-sea-50 text-sea-dark' }
+    : ready ? { t: 'Activos', c: 'bg-ok-50 text-ok' }
+    : started ? { t: 'Falta completar', c: 'bg-buoy-50 text-buoy-dark' }
+    : { t: 'Sin configurar', c: 'bg-buoy-50 text-buoy-dark' }
+  const steps = [
+    { icon: UserCheck, t: 'Te das de alta una vez', d: 'Stripe comprueba tu identidad, como hace un banco.' },
+    { icon: CreditCard, t: 'El pescador paga en la app', d: 'Cuando aceptas su solicitud, paga su plaza con tarjeta.' },
+    { icon: Landmark, t: 'Recibes tu parte en tu banco', d: 'Después de cada salida, por transferencia automática.' },
+  ]
   return (
-    <section className="space-y-3 rounded-2xl border border-line bg-white p-4">
+    <section className="space-y-4 rounded-2xl border border-line bg-white p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="flex items-center gap-2 text-sm font-bold"><CreditCard size={16} className="text-sea" /> Cobros con tarjeta</h2>
-        <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${ready ? 'bg-ok-50 text-ok' : 'bg-buoy-50 text-buoy-dark'}`}>
-          {ready ? 'Activos' : me.stripeConnected ? 'Falta completar' : 'Sin configurar'}
-        </span>
+        <h2 className="flex items-center gap-2 text-sm font-bold"><Wallet size={16} className="text-sea" /> Cobros y cuenta bancaria</h2>
+        <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${badge.c}`}>{badge.t}</span>
       </div>
-      <p className="text-[13px] text-ink-soft">
-        {ready
-          ? 'Los pescadores pagan en la app y recibes tu parte en tu cuenta bancaria después de cada salida.'
-          : 'Da de alta tu cuenta de cobro para que los pescadores paguen en la app. Es un alta segura con Stripe, se hace una sola vez y te pedirá tus datos y tu cuenta bancaria.'}
+
+      {ready ? (
+        <p className="text-[13px] text-ink-soft">
+          Tu cuenta de cobro está lista. Los pescadores pagan en la app y recibes tu parte en tu cuenta bancaria después de cada salida.
+        </p>
+      ) : (
+        <>
+          <p className="text-[13px] text-ink-soft">
+            {on
+              ? started
+                ? 'Empezaste el alta pero falta algún dato. Termínala para que los pescadores puedan pagarte con tarjeta.'
+                : 'Para cobrar las plazas con tarjeta, da de alta tu cuenta de cobro. Se hace una sola vez y tarda unos minutos.'
+              : 'Muy pronto los pescadores podrán pagar su plaza con tarjeta en la app y tú recibirás tu parte directamente en tu banco. Mientras tanto, el reparto se paga en efectivo.'}
+          </p>
+          <ol className="space-y-3">
+            {steps.map((st, i) => (
+              <li key={st.t} className="flex items-start gap-3">
+                <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-sea-50 text-sea"><st.icon size={16} /></span>
+                <div className="min-w-0">
+                  <p className="text-[13px] font-semibold">{i + 1}. {st.t}</p>
+                  <p className="text-xs text-ink-soft">{st.d}</p>
+                </div>
+              </li>
+            ))}
+          </ol>
+          <div className="rounded-xl bg-foam p-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-ink-soft">Ten a mano para el alta</p>
+            <ul className="mt-2 grid gap-1.5 text-[13px] sm:grid-cols-2">
+              {['Tu DNI o NIE', 'Tu dirección', 'Tu teléfono móvil', 'El IBAN de tu cuenta bancaria'].map((x) => (
+                <li key={x} className="flex items-center gap-2"><CheckCircle2 size={14} className="shrink-0 text-ok" /> {x}</li>
+              ))}
+            </ul>
+          </div>
+        </>
+      )}
+
+      <p className="flex items-start gap-2 text-xs text-ink-soft">
+        <ShieldCheck size={14} className="mt-px shrink-0 text-ok" />
+        Tus datos bancarios los guarda Stripe, una plataforma de pagos segura. Pescamigo nunca ve ni guarda tu cuenta.
       </p>
-      {!ready && (
-        <Button full disabled={busy || !!back} onClick={go}>
-          {busy ? 'Abriendo…' : me.stripeConnected ? 'Completar mi cuenta de cobro' : 'Configurar mis cobros'}
+
+      {!on ? (
+        <Button full disabled><Landmark size={16} /> Disponible muy pronto</Button>
+      ) : ready ? (
+        <Button full variant="outline" disabled={busy} onClick={() => run('dashboard')}>
+          <ExternalLink size={16} /> {busy ? 'Abriendo…' : 'Ver mis cobros y cambiar mi cuenta'}
+        </Button>
+      ) : (
+        <Button full disabled={busy || !!back} onClick={() => run('onboard')}>
+          <Landmark size={16} /> {busy ? 'Abriendo…' : started ? 'Completar mi cuenta de cobro' : 'Añadir mi cuenta de cobro'}
         </Button>
       )}
       <ErrorMsg>{err}</ErrorMsg>
@@ -280,7 +333,7 @@ export function Profile() {
             </div>
           </section>
         )}
-        {me.role === 'owner' && s.settings.paymentsEnabled && <PayoutCard />}
+        {me.role === 'owner' && <PayoutCard />}
         {me.role === 'owner' && <OwnerLevelCard ownerId={me.id} />}
 
         <section className="space-y-4 rounded-2xl border border-line bg-white p-4">
