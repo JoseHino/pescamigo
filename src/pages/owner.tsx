@@ -799,7 +799,8 @@ export function Income() {
     .map((b) => ({ b, o: s.outings.find((o) => o.id === b.outingId)!, boat: s.boats.find((x) => x.id === s.outings.find((o) => o.id === b.outingId)?.boatId) }))
     .sort((a, z) => (z.o.date + z.o.start).localeCompare(a.o.date + a.o.start))
   const sum = (k: 'baseAmount' | 'ownerFee' | 'ownerAmount') => rows.reduce((n, r) => n + r.b[k], 0)
-  const { paymentsEnabled, commissionPct } = s.settings
+  const { paymentsEnabled, ownerFeePct, fisherFeePct } = s.settings
+  const pct = (n: number) => String(n).replace('.', ',')
 
   return (
     <div className="flex h-full flex-col">
@@ -808,8 +809,8 @@ export function Income() {
         {!paymentsEnabled && (
           <p className="rounded-2xl bg-sea-50 p-4 text-[13px] text-sea-dark">
             Ahora mismo el reparto de gastos se paga en efectivo, directamente entre pescador y patrón, y Pescamigo no cobra nada.
-            Cuando se activen los pagos con tarjeta, el pescador pagará en la app, Pescamigo se quedará el {String(commissionPct).replace('.', ',')} % y
-            tú recibirás el resto en tu cuenta después de cada salida.
+            Cuando se activen los pagos con tarjeta, el pescador pagará en la app (más un {pct(fisherFeePct)} % de gestión que paga él), a ti se te descontará
+            un {pct(ownerFeePct)} % de gestión y recibirás el resto en tu cuenta después de cada salida.
           </p>
         )}
         <div className="grid grid-cols-3 gap-2">
